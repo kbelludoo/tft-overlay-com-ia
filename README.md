@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 ### 2. AI API Key (coloca uma vez e pronto)
 1. Acesse → **[https://opencode.ai](https://opencode.ai)** e crie uma conta gratuita
-2. Gere sua chave de API (modelo compatível com OpenAI)
+2. Gere sua chave de API (modelo compatível com OpenAI) — **100% gratuita, sem cartão de crédito**
 3. Cole no `.env`: `AI_API_KEY=sua_chave_ai`
 
 > ✅ A chave da IA é configurada **uma única vez** e não expira.
