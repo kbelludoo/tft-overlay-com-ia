@@ -12,17 +12,18 @@ pip install -r requirements.txt
 ## Chaves de API (OBRIGATORIO)
 
 ### 1. Riot API Key (renova a cada 24h)
-- Crie uma conta em: https://developer.riotgames.com/
-- Gere uma **Development API Key** (válida por 24 horas)
-- Cole no `.env`: `RIOT_API_KEY=sua_chave_riot`
+1. Acesse → **[https://developer.riotgames.com/](https://developer.riotgames.com/)**
+2. Faça login com sua conta Riot (a mesma do LoL)
+3. Gere uma **Development API Key** (válida por 24 horas)
+4. Copie a chave e cole no `.env`: `RIOT_API_KEY=sua_chave_riot`
 
 > ⚠️ Se muitas pessoas usarem a mesma chave ao mesmo tempo, você pode ficar sem acesso.
 > **Nunca compartilhe seu `.env`** — cada usuário deve ter sua própria chave.
 
 ### 2. AI API Key (coloca uma vez e pronto)
-- Acesse https://opencode.ai e crie uma conta gratuita
-- Gere sua chave de API (modelo compatível com OpenAI)
-- Cole no `.env`: `AI_API_KEY=sua_chave_ai`
+1. Acesse → **[https://opencode.ai](https://opencode.ai)** e crie uma conta gratuita
+2. Gere sua chave de API (modelo compatível com OpenAI)
+3. Cole no `.env`: `AI_API_KEY=sua_chave_ai`
 
 > ✅ A chave da IA é configurada **uma única vez** e não expira.
 
