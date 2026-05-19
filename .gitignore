@@ -19,6 +19,7 @@ data/opponent_cache.db
 current_patch.txt
 
 # Generated/temp files
+TFT_Overlay_*.txt
 TFT_Overlay_v5_*.txt
 *.artifact.json
 
