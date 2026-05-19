@@ -1,0 +1,903 @@
+================================================================================
+TFT AI OVERLAY v5.0 — CODIGO COMPLETO + DOCUMENTACAO
+================================================================================
+Data: 2026-05-18
+Autor: Opencode AI
+
+================================================================================
+1. VISAO GERAL DO PROJETO
+================================================================================
+
+O TFT AI Overlay e um assistente inteligente para Teamfight Tactics que:
+- Conecta no client do LoL via LCU API para detectar jogadores e oponentes
+- Usa a Riot API para analisar historico de partidas dos oponentes
+- Envia dados para uma IA (OpenAI-compatible) que sugere a melhor composicao
+- Mostra tudo em um overlay OLED-black minimalista (480px)
+- Funciona mesmo sem o jogo aberto (modo idle com browser de comps)
+
+Arquitetura:
+  LCU API → main.py (poll_loop async)
+             ├─ extract_opponent_names() → nomes + summonerId
+             ├─ fetch_opponents_rank() → elo via Riot API direto
+             ├─ analyze_all_opponents() → comps, traits, avg
+             ├─ detect_next_opponent() → proximo adversario
+             ├─ PromptBuilder → prompt estruturado
+             ├─ CloudAgent → IA (OpenAI-compatible)
+             └─ set_web_state() → web_server → overlay-hud.html (Chrome --app)
+
+================================================================================
+2. COMO INSTALAR E RODAR
+================================================================================
+
+1. pip install -r requirements.txt
+
+2. Criar arquivo .env na raiz:
+   AI_API_KEY=sua_chave_llm
+   RIOT_API_KEY=sua_chave_riot
+
+3. Rodar:
+   python main.py              # HUD nativa (Chromium --app, 480px)
+   python main.py --ctk        # CustomTkinter legacy
+   python main.py --mock       # Testa sem LoL
+   python main.py --port 9999  # Porta customizada
+
+4. Para atualizar meta com dados reais:
+   python update_meta.py --rank GOLD_IV --players 10 --matches 20
+
+================================================================================
+3. ARQUIVOS DO PROJETO
+================================================================================
+
+ Estrutura:
+ ├── main.py                     # Orquestrador central
+ ├── update_meta.py              # Atualizador de meta via Riot API
+ ├── overlay-hud.html            # HUD OLED-black (interface principal)
+ ├── overlay_config.json         # Configuracoes do usuario
+ ├── requirements.txt
+ ├── .env.example
+ ├── .gitignore
+ ├── index.html                  # Launcher page
+ ├── core/
+ │   ├── __init__.py
+ │   ├── config.py               # Config, logging, DPI awareness
+ │   ├── lcu_parser.py           # LCU lockfile, sessao, GamePhase
+ │   ├── opponent_tracker.py     # Analise de oponentes via Riot API
+ │   ├── rank_tracker.py         # Rank do jogador via LCU + Riot API
+ │   ├── web_server.py           # HTTP + WebSocket (estado, comps, mappings)
+ │   ├── memory_db.py            # SQLite WAL com conexao cacheada
+ │   ├── meta_db.py              # DB de composicoes por rank
+ │   ├── prompt_builder.py       # Construcao de prompt para IA
+ │   ├── prompt_compressor.py    # Compressao de historico
+ │   ├── cloud_agent.py          # Cliente OpenAI-compatible (httpx async)
+ │   ├── stage_heuristics.py     # Estimativas de level/ouro por stage
+ │   ├── api_wrapper.py          # SafeRequest com retry/jitter/cache
+ │   ├── data.py                 # Dados centralizados (champs, itens, augments)
+ │   ├── schema_validator.py     # Validacao + auto-reparo de JSON
+ │   ├── riot_key_manager.py     # Ciclo de vida da chave Riot API
+ │   ├── image_cache.py          # Cache de imagens (DataDragon + CommunityDragon)
+ │   └── native_window.py        # Janela Chromium --app mode
+ ├── ui/
+ │   ├── __init__.py
+ │   ├── overlay.py              # CustomTkinter overlay (legacy, --ctk)
+ │   └── styles.py               # Estilos CTk
+ └── data/
+     ├── meta_db.json            # Meta composicoes
+     ├── memory.db               # Historico SQLite
+     └── images/                 # Cache de assets
+
+================================================================================
+4. FLUXO DE DADOS
+================================================================================
+
+STARTUP:
+  load_dotenv() → load_config() → setup_logging() → validate_and_repair_all()
+  → check_patch_change() → fetch_champion_list() → _auto_update_meta_if_stale()
+  → get_my_rank() → MetaDB(rank) → PromptBuilder(mem, meta) → CloudAgent(cfg)
+  → preload_all_images() → start_web_server() → run_native() ou Overlay(cfg, q)
+
+MAIN LOOP (poll_loop, async):
+  1. Check cmd_q for user commands (reanalyze, register)
+  2. Check rank change → update meta
+  3. get_lcu_creds() → fetch_session()
+  4. If active game (ChampSelect/GameStart/InProgress):
+     a. extract_opponent_names(session, creds) → nomes + summonerId
+     b. fetch_opponents_rank(opp_data) → elo via Riot API direto
+     c. detect_next_opponent() → proximo adversario
+     d. analyze_all_opponents(opp_names) → comps, traits, avg_placement
+     e. PromptBuilder.build() → prompt estruturado
+     f. CloudAgent.call() → IA sugere comp
+     g. Fallback to meta_db if AI fails
+     h. contest risk calculation
+     i. set_web_state() → web_server → overlay-hud.html
+  5. If game ended: log_match() → memory_db
+  6. Adaptive sleep based on stage/HP
+
+WEB SERVER (background thread):
+  GET /api/state → JSON state for HUD
+  GET /api/comps → all comps from meta_db
+  GET /api/reanalyze → push cmd to cmd_q (rate limit 5s)
+  GET /api/mappings → champion/item name mappings
+  WebSocket ws://127.0.0.1:{port+1} → push state to browser
+  GET /hud or / → overlay-hud.html
+  GET /images/<file> → serve from data/images/
+
+================================================================================
+5. ARQUIVOS PYTHON — CODIGO COMPLETO
+================================================================================
+
+================================================================================
+5.1 core/config.py
+================================================================================
+
+"""
+Config, logging, DPI awareness.
+Funcoes: load_config, save_config, setup_logging, enable_dpi_awareness,
+         get_riot_region, get_riot_platform, get_tft_set
+"""
+import os, json, logging, ctypes
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
+
+PROJECT_DIR = Path(__file__).parent.parent
+CONFIG_FILE = PROJECT_DIR / "overlay_config.json"
+LOG_DIR = PROJECT_DIR / "logs"
+
+def load_config() -> dict:
+    try:
+        if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def save_config(cfg: dict):
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+    except Exception as e: logging.error(f"Config save error: {e}")
+
+def setup_logging(cfg: dict = None):
+    cfg = cfg or load_config()
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_cfg = cfg.get("logging", {})
+    handler = RotatingFileHandler(
+        LOG_DIR / "overlay.log",
+        maxBytes=log_cfg.get("max_bytes", 5*1024*1024),
+        backupCount=log_cfg.get("backup_count", 7),
+        encoding="utf-8"
+    )
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)-5s] %(module)s:%(lineno)d %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    ))
+    logger = logging.getLogger()
+    logger.setLevel(log_cfg.get("level", "INFO").upper())
+    logger.handlers.clear()
+    logger.addHandler(handler)
+    console = logging.StreamHandler()
+    console.setLevel(logging.ERROR)
+    console.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    logger.addHandler(console)
+
+def enable_dpi_awareness():
+    try: ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try: ctypes.windll.user32.SetProcessDPIAware()
+        except Exception: pass
+
+def get_riot_region(cfg: dict = None) -> str:
+    cfg = cfg or load_config()
+    return cfg.get("riot_region", "br1")
+
+def get_riot_platform(cfg: dict = None) -> str:
+    cfg = cfg or load_config()
+    return cfg.get("riot_platform", "americas")
+
+def get_tft_set(cfg: dict = None) -> str:
+    cfg = cfg or load_config()
+    return cfg.get("tft_set", "TFTSet17")
+
+def get_window_pos(cfg: dict, w: int, h: int) -> tuple:
+    x = cfg.get("window", {}).get("x", 100)
+    y = cfg.get("window", {}).get("y", 100)
+    if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+        return 100, 100
+    return int(x), int(y)
+
+================================================================================
+5.2 core/lcu_parser.py
+================================================================================
+
+"""
+LCU (League Client Update) parser.
+Detecta lockfile do LoL, obtem credenciais, busca sessao do jogo,
+e faz parse do estado do jogo (board, shop, augments, oponentes).
+
+Classes:
+- GamePhase(StrEnum) — constantes de fase do jogo
+- GameState — dataclass com estado do jogo
+
+Funcoes:
+- get_lcu_creds() — le lockfile e retorna (port, password)
+- fetch_session(port, pwd) — busca sessao via LCU API
+- parse_state(session) — extrai GameState de dados LCU
+"""
+import os, requests, logging, urllib3
+from dataclasses import dataclass, field
+from typing import Optional, Dict, List
+from enum import StrEnum
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+class GamePhase(StrEnum):
+    NONE = "None"
+    LOBBY = "Lobby"
+    MATCHMAKING = "Matchmaking"
+    READY_CHECK = "ReadyCheck"
+    CHAMP_SELECT = "ChampSelect"
+    GAME_START = "GameStart"
+    IN_PROGRESS = "InProgress"
+    RECONNECT = "Reconnect"
+    PRE_END_OF_GAME = "PreEndOfGame"
+    WAITING_FOR_STATS = "WaitingForStats"
+    END_OF_GAME = "EndOfGame"
+    TERMINATED = "Terminated"
+    UNKNOWN = "Unknown"
+
+GAME_PHASES_ACTIVE = {GamePhase.CHAMP_SELECT, GamePhase.GAME_START, GamePhase.IN_PROGRESS}
+GAME_PHASES_ENDED = {GamePhase.WAITING_FOR_STATS, GamePhase.END_OF_GAME, GamePhase.TERMINATED}
+GAME_PHASES_IDLE = {GamePhase.NONE, GamePhase.LOBBY, GamePhase.MATCHMAKING, GamePhase.READY_CHECK}
+
+@dataclass
+class GameState:
+    phase: str = "Unknown"
+    stage: str = "1-1"
+    gold: int = 0
+    level: int = 1
+    my_board: List[str] = field(default_factory=list)
+    shop: List[str] = field(default_factory=list)
+    my_augments: List[str] = field(default_factory=list)
+    opponents: List[Dict] = field(default_factory=list)
+    is_tft: bool = False
+    game_active: bool = False
+
+def get_lcu_creds() -> Optional[tuple]:
+    possible_paths = [
+        "D:\\Riot Games\\League of Legends\\lockfile",
+        "C:\\Riot Games\\League of Legends\\lockfile",
+        "C:\\Program Files\\Riot Games\\League of Legends\\lockfile",
+        "D:\\Riot Games\\League of Legends (PBE)\\lockfile",
+        os.path.join(os.environ.get("LOCALAPPDATA",""), "Riot Games", "League of Legends", "lockfile"),
+    ]
+    for lf in possible_paths:
+        if not os.path.exists(lf): continue
+        try:
+            with open(lf, "r", encoding="utf-8") as f:
+                p = f.read().strip().split(":")
+            if len(p) >= 5 and p[2].isdigit() and "League" in p[0]:
+                return (p[2], p[3])
+        except Exception as e:
+            logging.debug(f"Erro lendo lockfile {lf}: {e}")
+            continue
+    return None
+
+def fetch_session(port: str, pwd: str) -> Optional[dict]:
+    try:
+        r = requests.get(f"https://127.0.0.1:{port}/lol-gameflow/v1/session",
+                         auth=("riot", pwd), verify=False, timeout=3)
+        return r.json() if r.status_code == 200 else None
+    except Exception as e:
+        logging.debug(f"Erro fetch_session: {e}")
+        return None
+
+def parse_state(session: Optional[dict]) -> GameState:
+    st = GameState()
+    if not session: return st
+    try:
+        gd = session.get("gameData") or {}
+        st.phase = session.get("phase") or gd.get("gamePhase", "Unknown")
+        game_mode = gd.get("gameMode") or (gd.get("queue") or {}).get("gameMode") or ""
+        if game_mode != "TFT": return st
+        st.is_tft = True
+        st.stage = str(gd.get("gameStage", "1-1"))
+        st.game_active = st.phase in {GamePhase.IN_PROGRESS, GamePhase.RECONNECT, GamePhase.PRE_END_OF_GAME}
+        pd = gd.get("playerData") or {}
+        st.gold = int(pd.get("currentGold", 0))
+        st.level = int(pd.get("level", 1))
+        st.my_board = [u.get("name","") for u in (pd.get("champions") or []) if isinstance(u, dict) and u.get("name")]
+        st.shop = [c.get("name","") for c in (pd.get("shopChampions") or []) if isinstance(c, dict) and c.get("name")]
+        augments_raw = (pd.get("augments") or []) + (gd.get("augments") or [])
+        st.my_augments = [a.get("name","") for a in augments_raw if isinstance(a, dict) and a.get("name")]
+        opps = gd.get("opponentData", [])
+        my_id = pd.get("playerId")
+        if isinstance(opps, dict):
+            items = list(opps.values())
+        else:
+            items = opps if isinstance(opps, list) else []
+        for o in items:
+            if isinstance(o, dict) and o.get("playerId") != my_id:
+                st.opponents.append({
+                    "name": o.get("summonerName", "?"),
+                    "board": [u.get("name","") for u in (o.get("champions") or []) if isinstance(u, dict) and u.get("name")],
+                    "health": int(o.get("health", 100)),
+                    "traits": [t.get("name","") for t in (o.get("activeTraits") or []) if isinstance(t, dict) and t.get("tier",0) >= 2]
+                })
+    except Exception as e: logging.error(f"LCU parse error: {e}")
+    return st
+
+================================================================================
+5.3 core/opponent_tracker.py
+================================================================================
+
+"""
+Rastreamento de oponentes via Riot API.
+Analisa historico de partidas de cada oponente para encontrar:
+- Rank atual (via summonerId direto)
+- Composicoes mais jogadas
+- Traits mais usados
+- Colocacao media
+
+Cache com TTL de 5 minutos.
+ThreadPoolExecutor com max 4 workers para analise paralela.
+"""
+import os, requests, logging, time, threading
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).parent.parent / ".env")
+RIOT_API_KEY = os.getenv("RIOT_API_KEY", "")
+
+def _get_region():
+    from core.config import get_riot_region, get_riot_platform
+    return get_riot_region(), get_riot_platform()
+
+def _headers():
+    return {"X-Riot-Token": RIOT_API_KEY}
+
+_analysis_cache = {}
+_cache_lock = threading.Lock()
+CACHE_TTL = 300
+
+def get_name_by_puuid(puuid: str) -> str | None:
+    region, platform = _get_region()
+    try:
+        r = requests.get(f"https://{platform}.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuid}",
+                         headers=_headers(), timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            return f"{data.get('gameName', '')}#{data.get('tagLine', '')}"
+    except Exception as e:
+        logging.debug(f"Erro get_name_by_puuid: {e}")
+    return None
+
+def get_puuid(summoner_name: str, tag: str = "") -> str | None:
+    region, platform = _get_region()
+    if not tag: tag = region.upper()
+    try:
+        name = summoner_name.replace(" ", "%20")
+        r = requests.get(f"https://{platform}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}",
+                         headers=_headers(), timeout=5)
+        if r.status_code == 200:
+            return r.json().get("puuid")
+    except Exception as e:
+        logging.error(f"Erro ao buscar PUUID de {summoner_name}: {e}")
+    return None
+
+def get_summoner_id_by_puuid(puuid: str) -> str | None:
+    region, platform = _get_region()
+    try:
+        r = requests.get(f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}",
+                         headers=_headers(), timeout=5)
+        if r.status_code == 200:
+            return r.json().get("id")
+    except Exception as e:
+        logging.debug(f"Erro get_summoner_id_by_puuid: {e}")
+    return None
+
+def get_tft_rank(summoner_id: str) -> str:
+    region, platform = _get_region()
+    try:
+        r = requests.get(f"https://{region}.api.riotgames.com/tft/league/v1/entries/by-summoner/{summoner_id}",
+                         headers=_headers(), timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            if data:
+                for entry in data:
+                    if entry.get("queueType") == "RANKED_TFT":
+                        return f"{entry['tier']} {entry['rank']} ({entry['leaguePoints']} LP)"
+            return "Sem Rank"
+    except Exception as e:
+        logging.debug(f"Erro get_tft_rank: {e}")
+    return "Desconhecido"
+
+def get_match_ids(puuid: str, count: int = 10) -> list:
+    region, platform = _get_region()
+    try:
+        r = requests.get(f"https://{platform}.api.riotgames.com/tft/match/v1/matches/by-puuid/{puuid}/ids",
+                         headers=_headers(), params={"count": count, "queue": 480}, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        logging.error(f"Erro ao buscar matches de {puuid}: {e}")
+    return []
+
+def get_match_details(match_id: str) -> dict | None:
+    region, platform = _get_region()
+    try:
+        r = requests.get(f"https://{platform}.api.riotgames.com/tft/match/v1/matches/{match_id}",
+                         headers=_headers(), timeout=10)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        logging.error(f"Erro ao buscar detalhes de {match_id}: {e}")
+    return None
+
+def analyze_opponent(summoner_name: str) -> dict:
+    now = time.time()
+    with _cache_lock:
+        if summoner_name in _analysis_cache:
+            cached = _analysis_cache[summoner_name]
+            if now - cached["_timestamp"] < CACHE_TTL:
+                return {k: v for k, v in cached.items() if k != "_timestamp"}
+
+    result = {"name": summoner_name, "comps": [], "traits": [], "avg_placement": 0,
+              "recent_comps": [], "rank": "Desconhecido"}
+    puuid = get_puuid(summoner_name)
+    if not puuid: return result
+    summoner_id = get_summoner_id_by_puuid(puuid)
+    if summoner_id:
+        result["rank"] = get_tft_rank(summoner_id)
+    match_ids = get_match_ids(puuid, count=10)
+    if not match_ids: return result
+    placements = []
+    comp_counts = {}
+    trait_counts = {}
+    for mid in match_ids:
+        details = get_match_details(mid)
+        if not details: continue
+        info = details.get("info", {})
+        participants = info.get("participants", [])
+        for p in participants:
+            if p.get("puuid") == puuid:
+                placement = p.get("placement", 8)
+                placements.append(placement)
+                traits = p.get("traits", [])
+                for t in traits:
+                    name = t.get("name", "")
+                    tier = t.get("tier", 0)
+                    if name and tier >= 2:
+                        trait_counts[name] = trait_counts.get(name, 0) + 1
+                units = p.get("units", [])
+                unit_names = [u.get("character_id", "") for u in units if u.get("tier", 0) >= 2]
+                if unit_names:
+                    comp_key = ", ".join(sorted(unit_names[:5]))
+                    comp_counts[comp_key] = comp_counts.get(comp_key, 0) + 1
+                break
+    result["avg_placement"] = round(sum(placements) / len(placements), 1) if placements else 0
+    result["recent_comps"] = sorted(comp_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+    result["traits"] = sorted(trait_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    with _cache_lock:
+        cache_entry = dict(result)
+        cache_entry["_timestamp"] = now
+        _analysis_cache[summoner_name] = cache_entry
+    return result
+
+def analyze_all_opponents(opponent_names: list) -> dict:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    results = {}
+    with ThreadPoolExecutor(max_workers=min(len(opponent_names), 4)) as executor:
+        futures = {}
+        for name in opponent_names:
+            if name and name != "?":
+                futures[executor.submit(analyze_opponent, name)] = name
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                results[name] = future.result()
+            except Exception as e:
+                logging.error(f"Erro ao analisar {name}: {e}")
+                results[name] = {"name": name, "comps": [], "traits": [], "avg_placement": 0, "rank": "Erro"}
+    return results
+
+================================================================================
+5.4 core/rank_tracker.py
+================================================================================
+
+"""
+Rank do jogador via LCU + Riot API.
+Obtem PUUID e summonerId via LCU, depois busca rank na Riot API.
+"""
+import os, requests, logging, base64
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).parent.parent / ".env")
+RIOT_API_KEY = os.getenv("RIOT_API_KEY", "")
+
+def _get_region():
+    from core.config import get_riot_region, get_riot_platform
+    return get_riot_region(), get_riot_platform()
+
+def _headers():
+    return {"X-Riot-Token": RIOT_API_KEY}
+
+def get_my_rank() -> dict:
+    region, platform = _get_region()
+    try:
+        from core.lcu_parser import get_lcu_creds
+        creds = get_lcu_creds()
+        if not creds:
+            return {"tier": "Unknown", "rank": "", "lp": 0}
+        port, pwd = creds
+        auth = base64.b64encode(f'riot:{pwd}'.encode()).decode()
+        lcu_headers = {"Authorization": f"Basic {auth}"}
+        r = requests.get(f"https://127.0.0.1:{port}/lol-summoner/v1/current-summoner",
+                         headers=lcu_headers, verify=False, timeout=3)
+        if r.status_code != 200:
+            return {"tier": "Unknown", "rank": "", "lp": 0}
+        summoner_data = r.json()
+        encrypted_summoner_id = summoner_data.get("id", "")
+        puuid = summoner_data.get("puuid", "")
+        if encrypted_summoner_id and RIOT_API_KEY:
+            r = requests.get(f"https://{region}.api.riotgames.com/tft/league/v1/entries/by-summoner/{encrypted_summoner_id}",
+                             headers=_headers(), timeout=5)
+            if r.status_code == 200:
+                entries = r.json()
+                for entry in entries:
+                    if entry.get("queueType") == "RANKED_TFT":
+                        return {
+                            "tier": entry.get("tier", "Unknown"),
+                            "rank": entry.get("rank", ""),
+                            "lp": entry.get("leaguePoints", 0)
+                        }
+        if puuid and RIOT_API_KEY:
+            r = requests.get(f"https://{region}.api.riotgames.com/tft/league/v1/by-puuid/{puuid}",
+                             headers=_headers(), timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                return {
+                    "tier": data.get("tier", "Unknown"),
+                    "rank": data.get("rank", ""),
+                    "lp": data.get("leaguePoints", 0)
+                }
+    except Exception as e:
+        logging.error(f"Erro ao buscar rank: {e}")
+    return {"tier": "Unknown", "rank": "", "lp": 0}
+
+def get_comps_for_rank(tier: str) -> list:
+    try:
+        from core.meta_db import MetaDB
+        mdb = MetaDB(player_rank_tier=tier)
+        top = mdb.get_top_comps()
+        return [c.get("name", "") for c in top if c.get("name")]
+    except Exception as e:
+        logging.warning(f"Erro ao buscar comps para rank {tier}: {e}")
+        return []
+
+================================================================================
+5.5 core/stage_heuristics.py
+================================================================================
+
+"""
+Tabela de heuristica: stage -> nivel esperado e ouro estimado.
+Usado quando o LCU nao fornece dados em tempo real.
+"""
+LEVEL_TABLE = {
+    "1-1": 3, "1-2": 3, "1-3": 3, "1-4": 3,
+    "2-1": 4, "2-2": 4, "2-3": 4, "2-4": 4, "2-5": 4, "2-6": 4, "2-7": 4,
+    "3-1": 5, "3-2": 5, "3-3": 5, "3-4": 5, "3-5": 5, "3-6": 5, "3-7": 5,
+    "4-1": 6, "4-2": 6, "4-3": 6, "4-4": 6, "4-5": 6, "4-6": 6, "4-7": 6,
+    "5-1": 7, "5-2": 7, "5-3": 7, "5-4": 7, "5-5": 7, "5-6": 7, "5-7": 7,
+    "6-1": 8, "6-2": 8, "6-3": 8, "6-4": 8, "6-5": 8, "6-6": 8, "6-7": 8,
+    "7-1": 9, "7-2": 9, "7-3": 9, "7-4": 9, "7-5": 9, "7-6": 9, "7-7": 9,
+}
+
+GOLD_TABLE = {
+    "1-1": 2, "1-2": 5, "1-3": 8, "1-4": 11,
+    "2-1": 14, "2-2": 18, "2-3": 22, "2-4": 26, "2-5": 30, "2-6": 34, "2-7": 38,
+    "3-1": 42, "3-2": 46, "3-3": 50, "3-4": 50, "3-5": 50, "3-6": 50, "3-7": 50,
+    "4-1": 50, "4-2": 50, "4-3": 50, "4-4": 50, "4-5": 50, "4-6": 50, "4-7": 50,
+    "5-1": 50, "5-2": 50, "5-3": 50, "5-4": 50, "5-5": 50, "5-6": 50, "5-7": 50,
+    "6-1": 50, "6-2": 50, "6-3": 50, "6-4": 50, "6-5": 50, "6-6": 50, "6-7": 50,
+    "7-1": 50, "7-2": 50, "7-3": 50, "7-4": 50, "7-5": 50, "7-6": 50, "7-7": 50,
+}
+
+def estimate_level(stage: str) -> int:
+    return LEVEL_TABLE.get(stage, 5)
+
+def estimate_gold(stage: str) -> int:
+    return GOLD_TABLE.get(stage, 30)
+
+def enrich_state(state):
+    if getattr(state, 'level', 1) <= 0:
+        state.level = estimate_level(state.stage)
+    if state.gold <= 0:
+        state.gold = estimate_gold(state.stage)
+    return state
+
+================================================================================
+5.6 core/data.py
+================================================================================
+
+"""
+Dados centralizados: campeoes, IDs TFT17, hex codes, itens, augments.
+Source unica de verdade para todos os modulos.
+"""
+# [Conteudo completo: 241 linhas com TFT17_TO_NAME, CHAMPION_PT, DISPLAY_ALIASES,
+#  CHAMPION_HEX, CHAMP_TFTACADEMY, ITEM_PT, ITEM_TFTACADEMY, AUGMENT_PT,
+#  normalize_augment, pt, pt_item, pt_augment, to_tft17, to_tftacademy_champ,
+#  to_tftacademy_item, get_hex]
+
+================================================================================
+5.7 core/web_server.py
+================================================================================
+
+"""
+Servidor HTTP + WebSocket para overlay-hud.html e estado via JSON.
+Endpoints:
+  GET /api/state — estado atual do overlay
+  GET /api/comps — todas as composicoes do meta
+  GET /api/reanalyze — trigger re-analise (rate limit 5s)
+  GET /api/mappings — mapeamentos de nomes
+  WebSocket ws://127.0.0.1:{port+1} — push de estado
+
+Normalizacao (_normalize):
+  - Converte estado interno em formato JSON para o HUD
+  - Enriquece alternativas com items, tanks, augments
+  - Adiciona default items para champions sem core_items
+  - Passa prompt, guides, por que/como
+"""
+# [Conteudo completo: 421 linhas]
+
+================================================================================
+5.8 core/memory_db.py
+================================================================================
+
+"""
+SQLite WAL para historico de partidas.
+Tabelas: matches, patterns
+Conexao cacheada (self._conn) para reuso.
+Poda condicional (só quando COUNT > 500).
+"""
+# [Conteudo completo: 185 linhas]
+
+================================================================================
+5.9 core/meta_db.py
+================================================================================
+
+"""
+Meta composition database com fallback hardcoded.
+Carrega de data/meta_db.json ou usa composicoes hardcoded do Set 17.
+Funcoes:
+  get_comp_info(name) — retorna dados completos da comp
+  get_top_comps(tier) — top composicoes filtradas por tier
+  suggest_by_rank() — melhor comp pro rank
+  suggest_by_board(board, stage) — sugestao baseada no board atual
+  _enrich_core_items() — adiciona itens via lookup global
+  _get_champion_item_lookup() — frequency table de itens por champion
+"""
+# [Conteudo completo: 387 linhas]
+
+================================================================================
+5.10 core/prompt_builder.py
+================================================================================
+
+"""
+Construtor de prompts para IA.
+Inclui:
+  - Rank do jogador
+  - Comp sugerida pelo meta (com itens, augments, tanks)
+  - Historico recente comprimido
+  - Padroes locais de vitoria
+  - Analise detalhada dos oponentes (traits, comps, rank, avg)
+  - Counter suggestions
+  - Win rate estimado
+  - Augments registrados
+  - Estado atual (stage, gold, level, board)
+  - Instrucoes para a IA retornar JSON com porque, como, viabilidade
+"""
+# [Conteudo completo: 141 linhas]
+
+================================================================================
+5.11 core/prompt_compressor.py
+================================================================================
+
+"""
+Compressor de historico e oponentes.
+Transforma dados brutos em resumos curtos para o prompt.
+"""
+# [Conteudo completo: 95 linhas]
+
+================================================================================
+5.12 core/cloud_agent.py
+================================================================================
+
+"""
+Cliente IA OpenAI-compatible.
+Features:
+  - Extracao robusta de JSON (regex, brace-matching, key-value fallback)
+  - Cooldown entre chamadas
+  - Retry com exponential backoff
+  - Fallback para meta local se IA falhar
+"""
+# [Conteudo completo: 172 linhas]
+
+================================================================================
+5.13 core/api_wrapper.py
+================================================================================
+
+"""
+Wrapper de requests com retry, jitter, rate limit detection.
+Fetch de patch, champions, items, augments via DataDragon/CommunityDragon.
+Cache em JSON com TTL.
+"""
+# [Conteudo completo: 314 linhas]
+
+================================================================================
+5.14 core/schema_validator.py
+================================================================================
+
+"""
+Validador de schema para JSONs de data/.
+Auto-repair: se meta_db.json esta corrompido, regenera do fallback hardcoded.
+"""
+# [Conteudo completo: 232 linhas]
+
+================================================================================
+5.15 core/riot_key_manager.py
+================================================================================
+
+"""
+Gestor de ciclo de vida da chave Riot API.
+Detecta expiração (24h), avisa na UI, fallback automatico para cache local.
+"""
+# [Conteudo completo: 187 linhas]
+
+================================================================================
+5.16 core/native_window.py
+================================================================================
+
+"""
+Janela nativa via Chrome/Edge --app mode.
+Detecta Chrome, Brave, Edge, Vivaldi e abre em modo standalone.
+Fallback para webbrowser.open() se nenhum Chromium encontrado.
+"""
+# [Conteudo completo: 59 linhas]
+
+================================================================================
+5.17 core/image_cache.py
+================================================================================
+
+"""
+Cache de imagens de champions e itens.
+Download de DataDragon (champions) e CommunityDragon (itens).
+Salva como WebP em data/images/.
+Fallback para letter placeholder se download falhar.
+"""
+# [Conteudo completo: 128 linhas]
+
+================================================================================
+5.18 core/prompt_compressor.py
+================================================================================
+
+"""
+Compressor de historico: transforma 5 partidas brutas em resumo de ~150 tokens.
+Compressor de oponentes: dados detalhados com traits, comps, rank.
+"""
+# [Conteudo completo: 95 linhas]
+
+================================================================================
+6. ARQUIVOS DE CONFIGURACAO
+================================================================================
+
+requirements.txt:
+  customtkinter==5.2.2
+  httpx==0.27.2
+  requests==2.32.3
+  python-dotenv==1.0.1
+  Pillow>=10.0.0
+  pyperclip>=1.8.2
+  pywebview>=4.0
+  websockets>=12.0
+
+.env.example:
+  AI_API_KEY=sua_chave_ai_aqui
+  RIOT_API_KEY=sua_chave_riot_aqui
+
+.gitignore:
+  .env
+  __pycache__/
+  *.pyc
+  *.db
+  logs/
+  data/exports/
+  data/api_cache.json
+  data/opponent_state.json
+  data/riot_key_state.json
+  data/registered_augments.json
+
+overlay_config.json:
+  {
+    "window": {"width": 420, "height": 580, "alpha": 0.92},
+    "ai": {"provider": "opencode-zen", "model": "deepseek-v4-flash-free"},
+    "riot_region": "br1",
+    "riot_platform": "americas",
+    "tft_set": "TFTSet17"
+  }
+
+================================================================================
+7. HTML/CSS/JS — RESUMO
+================================================================================
+
+overlay-hud.html (1076 linhas):
+  CSS (1-228): Tema OLED-black, grid de units com molduras coloridas,
+               tabs de guias, secoes de prioridade
+  HTML (230-380): Header, WR bar, input manual, augments, comp browser,
+                   unidades, build priority, augments priority, guides,
+                   prompt display, footer
+  JS (382-1076):
+    - ITEM_MAP: mapeamento de nomes de itens
+    - champImgUrl/itemImgUrl: URLs de imagens (local + CDN fallback)
+    - renderCompFromData: renderiza comp completa
+    - renderUnitsFromData: unidades ordenadas por importancia
+    - renderBuildPriority: lista numerada de itens
+    - renderAugmentPriority: augments com check verde para registrados
+    - renderOpponents: oponentes com rank badges e next opponent
+    - selectAlt: troca de comp alternativa com deep copy
+    - userPickedAlt: flag para nao sobrescrever durante polling
+    - altChampionNames: rastreia champions novos da alt comp
+    - detectIdleMode: mostra browser de comps quando fora de jogo
+    - WebSocket + HTTP polling fallback
+    - Keyboard shortcuts (setas para navegar comps)
+    - Toggle prompt display
+
+================================================================================
+8. UPDATE_META.PY — ATUALIZACAO DO META
+================================================================================
+
+O update_meta.py:
+1. Busca summoners por rank via Riot API
+2. Para cada summoner, busca seus matches recentes
+3. Para cada match, extrai:
+   - Units (champions e seus niveis)
+   - Traits ativos
+   - Items por champion (units[].items[])
+   - Augments escolhidos (participants[].augments[])
+   - Colocacao final
+4. Calcula:
+   - Win rate por comp
+   - Itens mais usados por champion
+   - Augments mais usados
+   - Counter data (A vs B win rates)
+5. Salva em data/meta_db.json
+
+Uso:
+  python update_meta.py --rank GOLD_IV --players 10 --matches 20
+
+================================================================================
+9. RESUMO DAS FUNCIONALIDADES
+================================================================================
+
+1. Deteccao automatica de LoL via lockfile
+2. Analise de oponentes via Riot API (rank, comps, traits, avg placement)
+3. Proximo adversario detectado automaticamente
+4. Sugestao de composicao via IA com prompt estruturado
+5. Itens reais da API com prioridade de build
+6. Augments reais da API com prioridade de selecao
+7. Counter suggestions baseadas nos oponentes
+8. Win rate estimado vs oponentes
+9. Explicacao de POR QUE jogar cada comp
+10. Guia COMO jogar cada comp (early/mid/late)
+11. Molduras coloridas (carry=azul, tank=vermelho, support=cinza, alt=roxo)
+12. Ordenacao por importancia (itens > tank > support)
+13. Navegacao por comps no modo idle
+14. Modo streamer (oculta nomes)
+15. Export de historico (CSV/JSON)
+16. Auto-repair de JSONs corrompidos
+17. Preload de imagens (DataDragon)
+18. WebSocket + HTTP polling fallback
+
+================================================================================
+FIM DO DOCUMENTO
+================================================================================

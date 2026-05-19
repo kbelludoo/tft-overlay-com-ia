@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TFT AI Overlay</title>
+<style>
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #111111;
+  --fg: #e0e0e0;
+  --fg2: #808080;
+  --accent: #4fc3f7;
+  --border: #1a1a1a;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.launcher {
+  text-align: center;
+  padding: 40px;
+}
+h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  color: var(--accent);
+}
+.sub {
+  font-size: 13px;
+  color: var(--fg2);
+  margin-bottom: 32px;
+}
+.card {
+  display: inline-block;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  min-width: 360px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+  text-decoration: none;
+  color: inherit;
+}
+.card:hover { border-color: var(--accent); }
+.card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.card-desc {
+  font-size: 12px;
+  color: var(--fg2);
+  line-height: 1.5;
+}
+.card .arrow {
+  float: right;
+  color: var(--accent);
+  font-size: 18px;
+  margin-top: -2px;
+}
+.badge {
+  display: inline-block;
+  font-size: 9px;
+  padding: 2px 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--fg2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+</style>
+</head>
+<body>
+<div class="launcher">
+  <h1>TFT AI Overlay</h1>
+  <div class="sub">OLED Black — Minimal</div>
+  <a class="card" href="/hud">
+    <span class="card-title">
+      Overlay HUD
+      <span class="badge">Em jogo</span>
+      <span class="arrow">→</span>
+    </span>
+    <div class="card-desc">
+      Composição sugerida, oponentes, unidades, augments,<br>
+      guia de posicionamento, feedback e modo streamer.
+    </div>
+  </a>
+</div>
+</body>
+</html>

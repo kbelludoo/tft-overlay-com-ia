@@ -1,0 +1,21 @@
+<question-form id="discovery" title="Quick brief — 30 seconds">
+{
+  "description": "OLED black, minimalist. Just need a few specifics to nail the direction.",
+  "questions": [
+    { "id": "output", "label": "What are we making?", "type": "radio", "required": true,
+      "options": ["Single web prototype / landing", "Multi-screen app prototype", "Dashboard / tool UI", "Editorial / marketing page", "Other — I'll describe"] },
+    { "id": "platform", "label": "Target platform", "type": "checkbox", "maxSelections": 4,
+      "options": ["Responsive web", "Desktop web", "iOS app", "Android app", "Desktop app"] },
+    { "id": "fidelity", "label": "Fidelity", "type": "radio", "required": true,
+      "options": ["Wireframe / rough layout", "High-fidelity / polished"] },
+    { "id": "audience", "label": "Who is this for?", "type": "text",
+      "placeholder": "e.g. dev-tools buyers, investors, personal project" },
+    { "id": "tone", "label": "Visual tone (OLED black + ___)", "type": "radio", "required": true,
+      "options": ["Tech / utility — data-dense, monospace, dark dashboard", "Modern minimal — clean, soft, product-focused", "Brutalist — loud type, visible grid, high contrast", "Editorial — magazine feel, serif headlines"] },
+    { "id": "scale", "label": "Roughly how much?", "type": "text",
+      "placeholder": "e.g. 1 landing page, 4 dashboard screens, 8 slides" },
+    { "id": "constraints", "label": "Anything else?", "type": "textarea",
+      "placeholder": "Must include: real app screens, specific features, real copy, dark/light mode toggle, etc." }
+  ]
+}
+</question-form>

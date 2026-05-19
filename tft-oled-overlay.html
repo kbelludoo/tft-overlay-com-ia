@@ -1,0 +1,790 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TFT Overlay — OLED</title>
+<style>
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #111111;
+  --surface3: #181818;
+  --fg: #e0e0e0;
+  --fg-secondary: #a0a0a0;
+  --muted: #606060;
+  --border: #1a1a1a;
+  --accent: #4fc3f7;
+  --green: #66bb6a;
+  --yellow: #ffd54f;
+  --red: #ef5350;
+  --purple: #b39ddb;
+  --orange: #ffa726;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --radius: 0px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+  width: 480px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.overlay {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.header-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+}
+.header-status {
+  font-size: 11px;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.header-status .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── Sections ── */
+.section {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+}
+.section-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+/* ── Manual Input ── */
+.input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.input-row label {
+  font-size: 11px;
+  color: var(--fg-secondary);
+  margin-right: 2px;
+}
+.input-row input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 52px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.input-row input:focus {
+  border-color: var(--accent);
+}
+.input-row input.aug {
+  width: 120px;
+  font-family: var(--font-body);
+}
+.btn-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: var(--surface3);
+  color: var(--fg);
+  transition: background 0.15s;
+  border: 1px solid var(--border);
+}
+.btn:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+.btn-primary:hover { background: #6bd0ff; }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-green:hover { background: #7dce81; }
+.btn-purple { background: var(--purple); color: #000; border-color: var(--purple); }
+.btn-purple:hover { background: #c7aee3; }
+.btn-sm { height: 24px; padding: 0 8px; font-size: 11px; }
+.btn-warn { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-warn:hover { background: var(--red); color: #000; }
+
+/* ── Comp Card ── */
+.comp-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--surface);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+.comp-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.comp-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  margin-top: 3px;
+  color: var(--fg-secondary);
+}
+.comp-meta .green { color: var(--green); }
+.comp-meta .yellow { color: var(--yellow); }
+.comp-meta .red { color: var(--red); }
+.viab-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.viab-high { background: var(--green); color: #000; }
+.viab-mid { background: var(--yellow); color: #000; }
+.viab-low { background: var(--red); color: #000; }
+
+.contest-warn {
+  font-size: 11px;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-left: 2px solid;
+}
+.contest-high { color: var(--red); border-color: var(--red); }
+.contest-mid { color: var(--yellow); border-color: var(--yellow); }
+.contest-low { color: var(--green); border-color: var(--green); }
+
+/* ── Alternative comps pills ── */
+.alt-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.alt-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--fg-secondary);
+}
+.alt-pill:hover {
+  border-color: var(--accent);
+  color: var(--fg);
+  background: var(--surface);
+}
+.alt-pill.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.alt-pill .tier {
+  font-size: 9px;
+  color: var(--muted);
+  margin-left: 4px;
+  font-family: var(--font-mono);
+}
+
+/* ── Opponents ── */
+.opp-row {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.opp-card {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+  color: var(--fg-secondary);
+}
+.opp-card:hover { border-color: var(--muted); }
+.opp-card.alive { color: var(--fg); border-color: var(--border); }
+.opp-card.fighting { color: var(--yellow); border-color: var(--yellow); }
+.opp-card.dead { color: var(--red); border-color: var(--red); text-decoration: line-through; opacity: 0.5; }
+.opp-rank {
+  font-size: 9px;
+  color: var(--muted);
+  margin-left: 4px;
+  font-family: var(--font-mono);
+}
+.next-opp {
+  font-size: 11px;
+  color: var(--fg-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+.next-opp strong { color: var(--accent); font-style: normal; }
+
+/* ── Units Grid ── */
+.units-grid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.unit-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 68px;
+  padding: 6px 4px 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.unit-card .champ-img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  margin-bottom: 2px;
+  border: 1px solid var(--border);
+}
+.unit-card.tank .champ-img { border-color: var(--red); }
+.unit-name {
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  color: var(--fg);
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.unit-card.tank .unit-name { color: var(--red); }
+.unit-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 3px;
+  width: 100%;
+}
+.unit-item {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  padding: 1px 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Augments ── */
+.augment-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.augment-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--purple);
+}
+.augment-suggest .augment-pill { border-color: var(--purple); }
+.augment-registered {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--fg-secondary);
+}
+.augment-registered span { color: var(--purple); }
+
+/* ── Guide Tabs ── */
+.guide-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 6px;
+}
+.guide-tab {
+  height: 26px;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.guide-tab:first-child { border-right: none; }
+.guide-tab:not(:first-child):not(:last-child) { border-right: none; }
+.guide-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(79,195,247,0.06); }
+.guide-tab:hover:not(.active) { color: var(--fg-secondary); }
+.guide-content {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-secondary);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+.guide-content.open { max-height: 500px; }
+.guide-content p { margin-bottom: 4px; }
+.guide-content strong { color: var(--fg); }
+
+/* ── Footer ── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: auto;
+}
+.match-history {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.match-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+}
+.match-dot.win { background: var(--green); }
+.match-dot.loss { background: var(--red); }
+.match-dot.empty { background: var(--surface3); }
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.streamer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--muted);
+  user-select: none;
+}
+.streamer-toggle.active { color: var(--red); }
+.streamer-toggle .indicator {
+  width: 28px; height: 14px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background 0.15s;
+}
+.streamer-toggle .indicator::after {
+  content: '';
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 10px; height: 10px;
+  background: var(--muted);
+  transition: transform 0.15s, background 0.15s;
+}
+.streamer-toggle.active .indicator { border-color: var(--red); }
+.streamer-toggle.active .indicator::after { transform: translateX(14px); background: var(--red); }
+
+/* ══ Utility ══ */
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.gap-4 { gap: 4px; }
+.gap-6 { gap: 6px; }
+.mt-4 { margin-top: 4px; }
+.mt-6 { margin-top: 6px; }
+.mb-4 { margin-bottom: 4px; }
+.p-0 { padding: 0; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  color: var(--fg);
+  font-size: 11px;
+  padding: 6px 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ── Dialog Overlay (feedback) ── */
+.dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.dialog-overlay.open { display: flex; }
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  min-width: 280px;
+  text-align: center;
+}
+.dialog h3 { font-family: var(--font-display); font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.dialog p { font-size: 12px; color: var(--fg-secondary); margin-bottom: 14px; }
+.dialog .btn-row { justify-content: center; }
+</style>
+</head>
+<body>
+<div class="overlay" id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">TFT Overlay</span>
+    <span class="header-status"><span class="dot"></span>Em partida — 4-3</span>
+  </div>
+
+  <!-- Manual Input -->
+  <div class="section">
+    <div class="input-row">
+      <label>Nivel</label><input type="text" id="levelInput" value="8" class="mono">
+      <label>Ouro</label><input type="text" id="goldInput" value="42" class="mono">
+      <label>Augment</label><input type="text" id="augInput" placeholder="opcional" class="aug">
+      <button class="btn btn-sm" onclick="showToast('Reanalise solicitada')">Reanalisar</button>
+    </div>
+  </div>
+
+  <!-- Registered Augments -->
+  <div class="section" id="registeredSection">
+    <div class="section-label">Augments Registrados</div>
+    <div class="augment-row" id="registeredAugments">
+      <span class="augment-pill">Árvore de Traits</span>
+      <span class="augment-pill">Que os 4 Estejam Com Você</span>
+    </div>
+    <div class="augment-registered mt-4" id="nextAugments">Próximos: <span>Segure a Linha</span></div>
+  </div>
+
+  <!-- Composition -->
+  <div class="section">
+    <div class="flex-between mb-4">
+      <div>
+        <div class="comp-name">Dark Star Flex</div>
+        <div class="comp-meta">
+          <span class="green">WR: 58%</span>
+          <span class="mono">Avg: 3.2</span>
+          <span class="mono">1.2k jogos</span>
+        </div>
+      </div>
+      <span class="viab-pill viab-high mono" id="viabilityBadge">92%</span>
+    </div>
+    <div class="contest-warn contest-high" id="contestWarning">3 jogadores com comp similar</div>
+    <div class="flex gap-4 mt-4">
+      <button class="btn btn-sm btn-primary" onclick="copyComp()">Copiar Composição</button>
+    </div>
+  </div>
+
+  <!-- Alternative Comps -->
+  <div class="section">
+    <div class="section-label">Alternativas</div>
+    <div class="alt-row" id="altComps">
+      <span class="alt-pill" data-comp="Karma LB Duo">Karma LB Duo<span class="tier">A</span></span>
+      <span class="alt-pill" data-comp="Aurelion Sol Flex">Aurelion Sol Flex<span class="tier">S</span></span>
+      <span class="alt-pill" data-comp="Corki Riven">Corki Riven<span class="tier">S</span></span>
+      <span class="alt-pill" data-comp="Kaisa Karma">Kaisa Karma<span class="tier">A</span></span>
+    </div>
+  </div>
+
+  <!-- Opponents -->
+  <div class="section">
+    <div class="flex-between">
+      <div class="section-label">Oponentes — clique: vivo → lutando ✗ → morto ✗✗</div>
+    </div>
+    <div class="opp-row" id="opponents"></div>
+    <div class="next-opp mt-4" id="nextOpponent">Próximo: <strong>opponent3</strong> (estimativa)</div>
+  </div>
+
+  <!-- Units -->
+  <div class="section">
+    <div class="section-label">Unidades</div>
+    <div class="units-grid" id="unitsGrid"></div>
+  </div>
+
+  <!-- Augments Suggested -->
+  <div class="section">
+    <div class="section-label">Augments Sugeridos</div>
+    <div class="augment-row augment-suggest" id="suggestedAugments">
+      <span class="augment-pill">Árvore de Traits</span>
+      <span class="augment-pill">Que os 4 Estejam Com Você</span>
+      <span class="augment-pill">Segure a Linha</span>
+    </div>
+    <div class="flex gap-4 mt-4">
+      <button class="btn btn-sm btn-purple" onclick="registerAugment()">Registrar Augment</button>
+    </div>
+  </div>
+
+  <!-- Guides -->
+  <div class="section">
+    <div class="guide-tabs">
+      <button class="guide-tab active" data-tab="pos">Posicionamento</button>
+      <button class="guide-tab" data-tab="levels">Níveis</button>
+      <button class="guide-tab" data-tab="dicas">Dicas</button>
+      <button class="guide-tab" data-tab="contra">Contra</button>
+    </div>
+    <div class="guide-content open" id="guide-pos">
+      <p><strong>Jhin/Kai'Sa</strong> atrás, tanks na frente, <strong>Karma</strong> entre tanque e carry.</p>
+      <p>Coloque Jhin no canto oposto ao carry inimigo. Nunca coloque Karma na frente.</p>
+    </div>
+    <div class="guide-content" id="guide-levels">
+      <p><strong>Estratégia: Fast 8</strong></p>
+      <p>Lvl 5: Morde+Cho+Karma+Jinx/Aatrox</p>
+      <p>Lvl 6: +Jhin+Kaisa</p>
+      <p>Lvl 7: +Tahm+Nunu</p>
+      <p>Lvl 8: +Galio (roll pra 2★) | Lvl 9: +Bard</p>
+    </div>
+    <div class="guide-content" id="guide-dicas">
+      <p>Faça econômia forte early com Dark Star (3). Se conseguir 3★ no Jhin ou Kaisa, é top 1 garantido.</p>
+      <p>No late game, coloque Galio na linha de frente com itens de tank.</p>
+    </div>
+    <div class="guide-content" id="guide-contra">
+      <p>Forte vs composições <strong>AP-heavy</strong>. Fraco vs <strong>Assassinos</strong> — reposicione Jhin para o centro se houver muitos zed/akali.</p>
+      <p>Evite contestação direta: se 3+ jogadores forem de Dark Star, considere pivotar.</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="match-history">
+      <span class="match-dot win"></span>
+      <span class="match-dot loss"></span>
+      <span class="match-dot win"></span>
+      <span style="margin-left:6px;color:var(--fg-secondary);">67% WR (12 partidas)</span>
+    </div>
+    <div class="footer-right">
+      <span class="streamer-toggle" id="streamerToggle" onclick="toggleStreamer()">
+        <span class="indicator"></span>
+        <span>Streamer</span>
+      </span>
+      <span style="font-size:10px;color:var(--muted;">[Esc] Fechar</span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Dialog -->
+  <div class="dialog-overlay" id="feedbackDialog">
+    <div class="dialog">
+      <h3>Feedback</h3>
+      <p>4º lugar. A sugestão foi útil?</p>
+      <div class="btn-row">
+        <button class="btn btn-sm btn-primary" onclick="submitFeedback(true)">Sim, segui</button>
+        <button class="btn btn-sm btn-warn" onclick="submitFeedback(false)">Ignorei</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Demo Data ══
+const DEMO_UNITS = [
+  {name: 'Jhin', items: ['Gume do Infinito', 'Canhão de Repente', 'Último Sussurro'], tank: false},
+  {name: "Kai'Sa", items: ['Fúria de Guinsoo', 'Chapéu de Rabadon', 'Manopla Joalheira'], tank: false},
+  {name: 'Mordekaiser', items: ['Armadura de Warmog', 'Garra do Dragão', 'Armadura Gárgula'], tank: true},
+  {name: "Cho'Gath", items: ['Medalhão de Solari', 'Coração Congelado'], tank: true},
+  {name: 'Karma', items: ['Buff Azul', 'Manopla Joalheira'], tank: false},
+  {name: 'Tahm Kench', items: ['Armadura de Warmog', 'Garra do Dragão'], tank: true},
+  {name: 'Galio', items: ['Redenção', 'Armadura Gárgula'], tank: true},
+  {name: 'Nunu', items: ['Armadura de Warmog'], tank: true},
+  {name: 'Bard', items: [], tank: false},
+];
+
+const DEMO_OPPONENTS = [
+  {name: 'playerOne', rank: 'Diamond II', state: 0},
+  {name: 'opponent2', rank: 'Emerald I', state: 0},
+  {name: 'opponent3', rank: 'Master 200LP', state: 0},
+  {name: 'playerFour', rank: 'Diamond IV', state: 1},
+  {name: 'fivePlayer', rank: 'Emerald III', state: 2},
+  {name: 'six', rank: 'Platinum I', state: 0},
+  {name: 'seven', rank: 'Diamond III', state: 0},
+];
+
+let streamerMode = false;
+let opponentIdx = 0;
+
+function renderUnits(units) {
+  const grid = document.getElementById('unitsGrid');
+  grid.innerHTML = units.map(u => {
+    const IMG_MAP = {'Kai\'Sa':'Kaisa','Cho\'Gath':'Chogath','Bel\'Veth':'Belveth','Rek\'Sai':'RekSai','Nunu & Willump':'Nunu','Tahm Kench':'TahmKench','The Mighty Mech':'Galio'};
+    const imgName = IMG_MAP[u.name] || u.name.replace(/['\s&.]/g, '');
+    return `<div class="unit-card${u.tank ? ' tank' : ''}">
+      <img class="champ-img" src="data/images/champ_${imgName}_36.webp" alt="${u.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2236%22 height=%2236%22><rect fill=%22%23181818%22 width=%2236%22 height=%2236%22/><text x=%2218%22 y=%2220%22 text-anchor=%22middle%22 fill=%22%23606060%22 font-size=%228%22 font-family=%22sans-serif%22>${u.name[0]}</text></svg>'">
+      <div class="unit-name">${u.name}</div>
+      <div class="unit-items">${u.items.map(i => `<div class="unit-item">${i}</div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderOpponents(opponents) {
+  const container = document.getElementById('opponents');
+  container.innerHTML = opponents.map((o, i) => {
+    const stateClass = o.state === 0 ? 'alive' : o.state === 1 ? 'fighting' : 'dead';
+    const prefix = o.state === 1 ? '✗ ' : o.state === 2 ? '✗✗ ' : '';
+    const displayName = streamerMode ? o.name.slice(0,2)+'***' : prefix + o.name;
+    return `<div class="opp-card ${stateClass}" data-idx="${i}" onclick="cycleOpponent(${i})">
+      ${displayName}
+      ${o.rank ? `<span class="opp-rank">${streamerMode ? '--' : o.rank}</span>` : ''}
+    </div>`;
+  }).join('');
+  updateNextOpponent();
+}
+
+function cycleOpponent(idx) {
+  const opp = DEMO_OPPONENTS[idx];
+  opp.state = (opp.state + 1) % 3;
+  renderOpponents(DEMO_OPPONENTS);
+}
+
+function updateNextOpponent() {
+  const alive = DEMO_OPPONENTS.filter(o => o.state === 0);
+  if (alive.length <= 1) {
+    document.getElementById('nextOpponent').textContent = '';
+    return;
+  }
+  opponentIdx = opponentIdx % alive.length;
+  document.getElementById('nextOpponent').innerHTML = `Próximo: <strong>${alive[opponentIdx].name}</strong> (estimativa)`;
+  opponentIdx++;
+}
+
+function toggleStreamer() {
+  streamerMode = !streamerMode;
+  document.getElementById('streamerToggle').classList.toggle('active', streamerMode);
+  renderOpponents(DEMO_OPPONENTS);
+}
+
+let toastTimer;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function copyComp() {
+  navigator.clipboard.writeText('01JhinKaiSaMordekaiserChogathKarmaTahmKenchGalioNunuBardTFTSet17').then(() => {
+    showToast('Código copiado! (9 unidades)');
+  }).catch(() => showToast('Erro ao copiar'));
+}
+
+function registerAugment() {
+  const aug = document.getElementById('augInput').value.trim();
+  if (aug) {
+    const container = document.getElementById('registeredAugments');
+    container.innerHTML += `<span class="augment-pill">${aug}</span>`;
+    document.getElementById('augInput').value = '';
+    showToast(`Augment '${aug}' registrado!`);
+  } else {
+    showToast('Digite o nome do augment');
+  }
+}
+
+function submitFeedback(followed) {
+  document.getElementById('feedbackDialog').classList.remove('open');
+  showToast(followed ? 'Registrado. Bom jogo!' : 'Feedback ignorado registrado');
+}
+
+// ── Guide tabs ──
+document.querySelectorAll('.guide-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.guide-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.guide-content').forEach(c => c.classList.remove('open'));
+    tab.classList.add('active');
+    document.getElementById('guide-' + tab.dataset.tab).classList.add('open');
+  });
+});
+
+// ── Alt comp clicks ──
+document.querySelectorAll('.alt-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.alt-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    showToast(`Comp alterada para: ${pill.dataset.comp}`);
+  });
+});
+
+// ── Init ──
+renderUnits(DEMO_UNITS);
+renderOpponents(DEMO_OPPONENTS);
+
+// ══ Keyboard ══
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const dlg = document.getElementById('feedbackDialog');
+    if (dlg.classList.contains('open')) dlg.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>

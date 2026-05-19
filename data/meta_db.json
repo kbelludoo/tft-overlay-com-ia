@@ -1,0 +1,351 @@
+{
+  "comps": {
+    "Dark Star Flex": {
+      "units": [
+        "Jhin",
+        "Kai'Sa",
+        "Mordekaiser",
+        "Cho'Gath",
+        "Karma",
+        "Tahm Kench",
+        "The Mighty Mech",
+        "Nunu & Willump",
+        "Bard"
+      ],
+      "core_items": {
+        "Jhin": [
+          "InfinityEdge",
+          "RapidFireCannon",
+          "LastWhisper"
+        ],
+        "Kai'Sa": [
+          "Guinsoos",
+          "Rabadon",
+          "JeweledGauntlet"
+        ]
+      },
+      "augments": [
+        "TraitTree",
+        "MayTheFoursBeWithYou",
+        "HoldTheLine"
+      ],
+      "positioning": "Jhin/Kai'Sa atras, tanks na frente, Karma entre tanque e carry",
+      "tanks": [
+        "Mordekaiser",
+        "Cho'Gath",
+        "Tahm Kench",
+        "The Mighty Mech",
+        "Nunu & Willump"
+      ],
+      "levels": "Estratégia: Fast 8. Lvl 5: Morde+Cho+Karma+Jinx/Aatrox | Lvl 6: +Jhin+Kaisa | Lvl 7: +Tahm+Nunu | Lvl 8: +Galio (roll pra 2★) | Lvl 9: +Bard",
+      "dicas": "Faça econômia forte early com Dark Star (3). Coloque Jhin no canto oposto ao carry inimigo. NUNCA coloque Karma na frente. No late game, coloque Galio na linha de frente com itens de tank. Se conseguir 3 estrelas no Jhin ou Kaisa, é top 1 garantido.",
+      "tier": "S"
+    },
+    "Corki Riven": {
+      "units": [
+        "Corki",
+        "Riven",
+        "Bard",
+        "Bel'Veth",
+        "Gwen",
+        "Kai'Sa",
+        "Poppy",
+        "Nunu & Willump"
+      ],
+      "core_items": {
+        "Corki": [
+          "BlueBuff",
+          "JeweledGauntlet",
+          "Rabadon"
+        ],
+        "Riven": [
+          "InfinityEdge",
+          "Bloodthirster",
+          "LastWhisper"
+        ]
+      },
+      "augments": [
+        "BoxingLessons",
+        "TraitTree"
+      ],
+      "positioning": "Corki no meio, Riven de flank, tanks na frente",
+      "tanks": [
+        "Poppy",
+        "Nunu & Willump",
+        "Gwen"
+      ],
+      "levels": "Estratégia: Slow roll no lvl 6. Lvl 5: Poppy+Nunu+Corki+Riven | Lvl 6: +Gwen (role ate 2★) | Lvl 7: +BelVeth | Lvl 8: +Kaisa | Lvl 9: +Bard",
+      "dicas": "Role até 50 gold antes de subir nivel. Corki é o carry principal - protect ele com os tanks. Riven flanqueia pelo lado. Se pegar 3 estrelas no Corki, é gg. Evite colocar Corki no canto pois inimigos com Sniper vão focar ele.",
+      "tier": "S"
+    },
+    "Aurelion Sol Flex": {
+      "units": [
+        "Aurelion Sol",
+        "The Mighty Mech",
+        "Viktor",
+        "Kai'Sa",
+        "Morgana",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "core_items": {
+        "Aurelion Sol": [
+          "BlueBuff",
+          "Rabadon",
+          "JeweledGauntlet"
+        ],
+        "The Mighty Mech": [
+          "Warmogs",
+          "DragonClaw",
+          "Gargoyle"
+        ]
+      },
+      "augments": [
+        "Lineup",
+        "SpreadTheLove"
+      ],
+      "positioning": "Aurelion Sol no meio, Mech na frente, Viktor protegido",
+      "tanks": [
+        "The Mighty Mech",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Fast 8. Lvl 5: Poppy+Nunu+Morg+Asol | Lvl 6: +Mech | Lvl 7: +Viktor | Lvl 8: +Kaisa+Tahm (roll pra 2★ Asol/Mech) | Lvl 9: +Bard",
+      "dicas": "Priorize 2 estrelas no Aurelion Sol ASAP. Use The Mighty Mech como tank absoluto com 3 itens defensivos. Viktor é segundo carry - dê items AP leftovers. No early, use 2 Sorcerers + 2 Vanguards. No late game, adicione Bard para sinergia de utilidade.",
+      "tier": "S"
+    },
+    "Karma LB Duo": {
+      "units": [
+        "Karma",
+        "LeBlanc",
+        "Kai'Sa",
+        "Jhin",
+        "Morgana",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "core_items": {
+        "Karma": [
+          "BlueBuff",
+          "JeweledGauntlet",
+          "Rabadon"
+        ],
+        "LeBlanc": [
+          "BlueBuff",
+          "JeweledGauntlet",
+          "Rabadon"
+        ],
+        "Kai'Sa": [
+          "Guinsoos",
+          "InfinityEdge",
+          "LastWhisper"
+        ]
+      },
+      "augments": [
+        "TwoTanky",
+        "TraitTree"
+      ],
+      "positioning": "Karma/LeBlanc centro, tanks nas pontas",
+      "tanks": [
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Slow roll no lvl 6. Lvl 5: Poppy+Nunu+Karma+LeBlanc | Lvl 6: +Morgana (role 3★ Karma/LB) | Lvl 7: +Jhin | Lvl 8: +Kaisa | Lvl 9: +Tahm",
+      "dicas": "Karma e LeBlanc compartilham items AP - de os melhores para a que estiver mais perto de 3 estrelas. Kaisa é carry AD de backup. Early game fraco: perca streaks intencionalmente para pegar items prioritarios (Blue Buff). No late, posicione Karma e LeBlanc longe de assassinos.",
+      "tier": "A"
+    },
+    "Kaisa Karma": {
+      "units": [
+        "Kai'Sa",
+        "Karma",
+        "Vex",
+        "Jhin",
+        "Morgana",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "core_items": {
+        "Kai'Sa": [
+          "Guinsoos",
+          "Rabadon",
+          "JeweledGauntlet"
+        ],
+        "Karma": [
+          "BlueBuff",
+          "Rabadon",
+          "JeweledGauntlet"
+        ]
+      },
+      "augments": [
+        "TraitTree",
+        "MakeshiftArmor"
+      ],
+      "positioning": "Kai'Sa atras, Karma protegida, tanks na frente",
+      "tanks": [
+        "Poppy",
+        "Nunu & Willump",
+        "Vex",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Fast 8. Lvl 5: Poppy+Nunu+Karma+Morgana | Lvl 6: +Kaisa | Lvl 7: +Vex | Lvl 8: +Jhin (role 2★ Kaisa) | Lvl 9: +Tahm",
+      "dicas": "Kaisa é a carry principal - dê Guinsoos+Rabadon nela. Karma suporta com Blue Buff. Vex é um ótimo tank secundário. Early: use 2 Sorcerers + 2 Vanguards. No late game, posicione Kaisa no centro protegida por uma parede de tanks.",
+      "tier": "A"
+    },
+    "Samira Knockup": {
+      "units": [
+        "Samira",
+        "Kai'Sa",
+        "Jhin",
+        "Morgana",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench",
+        "Vex"
+      ],
+      "core_items": {
+        "Samira": [
+          "InfinityEdge",
+          "Bloodthirster",
+          "LastWhisper"
+        ],
+        "Kai'Sa": [
+          "Guinsoos",
+          "Rabadon"
+        ]
+      },
+      "augments": [
+        "TwoTanky",
+        "TraitTree"
+      ],
+      "positioning": "Samira no meio protegido, flanqueadores nas laterais",
+      "tanks": [
+        "Poppy",
+        "Nunu & Willump",
+        "Vex",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Slow roll no lvl 6. Lvl 5: Poppy+Nunu+Samira+Morgana | Lvl 6: +Vex (role 3★ Samira) | Lvl 7: +Jhin | Lvl 8: +Kaisa | Lvl 9: +Tahm",
+      "dicas": "Samira precisa de 3 estrelas para carregar - foque em rolá-la. Bloodthirster é essencial para o sustain dela. Use os tanks para criar espaço. Early game fraco, então perca streaks intencionalmente. No late, Kaisa vira segundo carry com items AP.",
+      "tier": "B"
+    },
+    "Fast 9 Jhin Meeple": {
+      "units": [
+        "Jhin",
+        "Meepsie",
+        "Mordekaiser",
+        "Cho'Gath",
+        "Kai'Sa",
+        "Karma",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "core_items": {
+        "Jhin": [
+          "InfinityEdge",
+          "RapidFireCannon",
+          "LastWhisper"
+        ],
+        "Meepsie": [
+          "Warmogs",
+          "DragonClaw",
+          "Gargoyle"
+        ]
+      },
+      "augments": [
+        "MayTheFoursBeWithYou"
+      ],
+      "positioning": "Jhin canto seguro, Meepsie tank principal",
+      "tanks": [
+        "Meepsie",
+        "Mordekaiser",
+        "Cho'Gath",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Fast 9 rush. Lvl 5: Morde+Cho+Jhin+Karma | Lvl 6: +Meepsie | Lvl 7: +Poppy+Nunu | Lvl 8: +Kaisa (NÃO role, compre XP) | Lvl 9: +Tahm+Bard (role tudo)",
+      "dicas": "Estratégia de rush level 9: compre xp todo turno ate level 8 antes de 4-2. Use uma compra inicial forte (2 Sniper + 2 Vanguard). Meepsie é o melhor tank - coloque os 3 items defensivos nele. Jhin no canto oposto ao carry inimigo. Venda unidades temporárias para financiar o rush.",
+      "tier": "A"
+    },
+    "Veigar Printer": {
+      "units": [
+        "Veigar",
+        "Kai'Sa",
+        "Karma",
+        "Vex",
+        "Morgana",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "core_items": {
+        "Veigar": [
+          "BlueBuff",
+          "Rabadon",
+          "JeweledGauntlet"
+        ],
+        "Kai'Sa": [
+          "Guinsoos",
+          "InfinityEdge"
+        ]
+      },
+      "augments": [
+        "MakeshiftArmor",
+        "TraitTree"
+      ],
+      "positioning": "Veigar protegido no meio, tanks ao redor",
+      "tanks": [
+        "Poppy",
+        "Nunu & Willump",
+        "Vex",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Slow roll no lvl 7. Lvl 5: Poppy+Nunu+Morgana+Veigar | Lvl 6: +Karma | Lvl 7: +Vex (role 3★ Veigar) | Lvl 8: +Kaisa | Lvl 9: +Tahm",
+      "dicas": "Veigar escala com AP - Blue Buff + Rabadon são obrigatorios. Cada habilidade reduz o HP do inimigo e stacka o AP dele. Proteja Veigar com uma parede de tanks. Kaisa é carry AD de backup. No late, adicione mais Sorcerers para multiplicar o dano do Veigar.",
+      "tier": "B"
+    },
+    "Yordle Marawlers": {
+      "units": [
+        "Master Yi",
+        "Briar",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench",
+        "Teemo"
+      ],
+      "core_items": {
+        "Master Yi": [
+          "InfinityEdge",
+          "Bloodthirster",
+          "LastWhisper"
+        ],
+        "Briar": [
+          "Warmogs",
+          "DragonClaw"
+        ]
+      },
+      "augments": [
+        "TreatedS2",
+        "TwoTanky"
+      ],
+      "positioning": "Yi flanqueando, tanks na frente",
+      "tanks": [
+        "Briar",
+        "Poppy",
+        "Nunu & Willump",
+        "Tahm Kench"
+      ],
+      "levels": "Estratégia: Slow roll no lvl 6. Lvl 5: Poppy+Nunu+Yi+Teemo | Lvl 6: +Briar (role 3★ Yi) | Lvl 7: +Tahm | Lvl 8-9: complete com Yordles",
+      "dicas": "Master Yi precisa de 3 estrelas - role pesado no level 6. Bloodthirster + Infinity Edge é core. Briar é o tank principal. Teemo serve como suporte e sinergia de trait. Early game forte com 3 Yordle. No late game, adicione mais Yordles para buffar o time todo.",
+      "tier": "A"
+    }
+  },
+  "last_updated": "2026-05-17T23:32:42.141979",
+  "source": "hardcoded-fallback"
+}

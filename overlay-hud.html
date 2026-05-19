@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TFT Overlay</title>
+<style>
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #111111;
+  --surface3: #181818;
+  --fg: #e0e0e0;
+  --fg-secondary: #a0a0a0;
+  --muted: #606060;
+  --border: #1a1a1a;
+  --accent: #4fc3f7;
+  --green: #66bb6a;
+  --yellow: #ffd54f;
+  --red: #ef5350;
+  --purple: #b39ddb;
+  --orange: #ffa726;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --radius: 0px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+  width: 480px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.overlay { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.header-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: var(--accent); }
+.header-status { font-size: 11px; color: var(--green); font-variant-numeric: tabular-nums; }
+.header-status .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 5px; vertical-align: middle; }
+
+/* Win Rate Bar */
+.wr-bar { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.wr-stat { display: flex; align-items: baseline; gap: 4px; }
+.wr-label { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.wr-value { font-family: var(--font-mono); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wr-value.win { color: var(--green); }
+.wr-value.mid { color: var(--yellow); }
+.wr-value.low { color: var(--red); }
+.wr-detail { font-size: 10px; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.wr-divider { width: 1px; height: 20px; background: var(--border); }
+
+/* Sections */
+.section { border-bottom: 1px solid var(--border); padding: 10px 14px; }
+.section-label { font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.legend { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 9px; color: var(--muted); margin-left: 8px; }
+.legend .lg { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 2px; vertical-align: middle; }
+.legend .lg.carry { background: var(--accent); }
+.legend .lg.tank { background: var(--red); }
+.legend .lg.support { background: var(--muted); }
+
+/* Manual Input */
+.input-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.input-row label { font-size: 11px; color: var(--fg-secondary); margin-right: 2px; }
+.input-row input { background: var(--surface2); border: 1px solid var(--border); color: var(--fg); font-family: var(--font-mono); font-size: 12px; padding: 5px 8px; width: 52px; outline: none; font-variant-numeric: tabular-nums; }
+.input-row input:focus { border-color: var(--accent); }
+.input-row input.aug { width: 120px; font-family: var(--font-body); }
+.btn-row { display: flex; gap: 6px; margin-top: 6px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 30px; padding: 0 12px; font-family: var(--font-body); font-size: 12px; font-weight: 500; border: none; cursor: pointer; background: var(--surface3); color: var(--fg); transition: background 0.15s; border: 1px solid var(--border); }
+.btn:hover { background: var(--surface2); }
+.btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+.btn-primary:hover { background: #6bd0ff; }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-green:hover { background: #7dce81; }
+.btn-purple { background: var(--purple); color: #000; border-color: var(--purple); }
+.btn-purple:hover { background: #c7aee3; }
+.btn-sm { height: 24px; padding: 0 8px; font-size: 11px; }
+.btn-warn { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-warn:hover { background: var(--red); color: #000; }
+
+/* Comp Card */
+.comp-card { display: flex; justify-content: space-between; align-items: flex-start; background: var(--surface); padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); }
+.comp-name { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.comp-meta { display: flex; gap: 10px; font-size: 11px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; margin-top: 3px; color: var(--fg-secondary); }
+.comp-meta .green { color: var(--green); }
+.comp-meta .yellow { color: var(--yellow); }
+.comp-meta .red { color: var(--red); }
+.viab-pill { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.viab-high { background: var(--green); color: #000; }
+.viab-mid { background: var(--yellow); color: #000; }
+.viab-low { background: var(--red); color: #000; }
+.contest-warn { font-size: 11px; margin-top: 4px; padding: 3px 8px; border-left: 2px solid; }
+.contest-high { color: var(--red); border-color: var(--red); }
+.contest-mid { color: var(--yellow); border-color: var(--yellow); }
+.contest-low { color: var(--green); border-color: var(--green); }
+
+/* Alternative comps pills */
+.alt-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.alt-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s, background 0.15s; color: var(--fg-secondary); }
+.alt-pill:hover { border-color: var(--accent); color: var(--fg); background: var(--surface); }
+.alt-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(79,195,247,0.06); }
+.alt-pill .tier { font-size: 9px; color: var(--muted); margin-left: 4px; font-family: var(--font-mono); }
+.alt-pill .wr { font-size: 9px; color: var(--green); margin-left: 4px; font-family: var(--font-mono); }
+
+/* Comp Browser (idle mode) */
+.comp-browser { display: none; }
+.comp-browser.visible { display: block; }
+.browser-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.browser-nav .nav-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--surface2); border: 1px solid var(--border); color: var(--fg); cursor: pointer; font-size: 16px; transition: background 0.12s, border-color 0.12s; }
+.browser-nav .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.browser-nav .nav-btn:disabled { opacity: 0.3; cursor: default; }
+.browser-nav .nav-counter { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Game mode sections hidden when idle */
+.game-mode { display: block; }
+.game-mode.hidden { display: none; }
+
+/* Opponents */
+.opp-section { }
+.opp-next-card { background: var(--surface); border: 1px solid var(--accent); padding: 10px 12px; margin-bottom: 8px; }
+.opp-next-label { font-family: var(--font-display); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.opp-next-name { font-size: 15px; font-weight: 600; color: var(--fg); }
+.opp-next-rank { font-size: 12px; color: var(--yellow); font-family: var(--font-mono); margin-top: 2px; }
+.opp-next-info { font-size: 11px; color: var(--fg-secondary); margin-top: 4px; line-height: 1.5; }
+.opp-next-comps { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.opp-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.opp-card { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); cursor: pointer; transition: all 0.12s; user-select: none; color: var(--fg-secondary); }
+.opp-card:hover { border-color: var(--muted); }
+.opp-card.alive { color: var(--fg); border-color: var(--border); }
+.opp-card.fighting { color: var(--yellow); border-color: var(--yellow); background: rgba(255,213,79,0.06); }
+.opp-card.dead { color: var(--red); border-color: var(--red); text-decoration: line-through; opacity: 0.5; }
+.opp-card.next-opp { border-color: var(--accent); background: rgba(79,195,247,0.08); }
+.opp-rank-badge { font-size: 9px; font-weight: 600; padding: 1px 5px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.02em; }
+.rank-iron { color: #8fa4b8; background: rgba(143,164,184,0.1); }
+.rank-bronze { color: #a0715e; background: rgba(160,113,94,0.1); }
+.rank-silver { color: #b0b0b0; background: rgba(176,176,176,0.1); }
+.rank-gold { color: var(--yellow); background: rgba(255,213,79,0.1); }
+.rank-platinum { color: #4fc3f7; background: rgba(79,195,247,0.1); }
+.rank-emerald { color: #66bb6a; background: rgba(102,187,106,0.1); }
+.rank-diamond { color: #b39ddb; background: rgba(179,157,219,0.1); }
+.rank-master { color: #ef5350; background: rgba(239,83,80,0.1); }
+.rank-grandmaster { color: #ef5350; background: rgba(239,83,80,0.15); }
+.rank-challenger { color: #ffd54f; background: rgba(255,213,79,0.15); }
+.rank-unknown { color: var(--muted); background: rgba(96,96,96,0.1); }
+.next-opp { font-size: 11px; color: var(--fg-secondary); margin-top: 4px; font-style: italic; }
+.next-opp strong { color: var(--accent); font-style: normal; }
+
+/* Units Grid */
+.units-grid { display: flex; gap: 4px; flex-wrap: wrap; }
+.unit-card { display: flex; flex-direction: column; align-items: center; width: 64px; padding: 6px 2px 4px; background: var(--surface); border: 1px solid var(--border); }
+.unit-card .champ-img { width: 42px; height: 42px; padding: 1px; border: 2px solid var(--border); border-radius: 3px; transition: border-color 0.2s; }
+.unit-card.carry .champ-img { border-color: var(--accent); }
+.unit-card.tank .champ-img { border-color: var(--red); }
+.unit-card.support .champ-img { border-color: var(--muted); }
+.unit-card.alt .champ-img { border-color: var(--purple); }
+.unit-items { display: flex; flex-direction: row; gap: 2px; flex-wrap: wrap; justify-content: center; margin-top: 3px; width: 100%; min-height: 14px; }
+.item-icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.item-icon { width: 18px; height: 18px; vertical-align: middle; border-radius: 2px; }
+.item-label { font-size: 7px; color: var(--muted); max-width: 36px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; line-height: 1.1; }
+.flex-slot { font-size: 8px; color: var(--muted); font-style: italic; }
+.build-list { display: flex; flex-direction: column; gap: 2px; }
+.build-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--fg-secondary); padding: 2px 0; }
+.build-item .build-num { font-family: var(--font-mono); font-size: 9px; color: var(--muted); min-width: 14px; text-align: right; }
+.build-item .build-champ { font-size: 10px; color: var(--fg-secondary); min-width: 60px; }
+.build-item .build-role { font-size: 9px; padding: 1px 4px; border-radius: 2px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.03em; }
+.build-item .build-role.carry { color: var(--accent); background: rgba(79,195,247,0.1); }
+.build-item .build-role.tank { color: var(--red); background: rgba(239,83,80,0.1); }
+.build-item .build-role.support { color: var(--muted); background: rgba(96,96,96,0.1); }
+
+/* Augments */
+.augment-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.augment-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; font-size: 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--purple); }
+.augment-suggest .augment-pill { border-color: var(--purple); }
+.augment-registered { margin-top: 4px; font-size: 10px; color: var(--fg-secondary); }
+.augment-registered span { color: var(--purple); }
+
+/* Guide Tabs */
+.guide-tabs { display: flex; gap: 0; margin-bottom: 6px; }
+.guide-tab { height: 26px; padding: 0 12px; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.12s; }
+.guide-tab:first-child { border-right: none; }
+.guide-tab:not(:first-child):not(:last-child) { border-right: none; }
+.guide-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(79,195,247,0.06); }
+.guide-tab:hover:not(.active) { color: var(--fg-secondary); }
+.guide-content { font-size: 12px; line-height: 1.55; color: var(--fg-secondary); max-height: 0; overflow: hidden; transition: max-height 0.2s ease; }
+.guide-content.open { max-height: 500px; }
+.guide-content p { margin-bottom: 4px; }
+.guide-content strong { color: var(--fg); }
+
+/* Footer */
+.footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); margin-top: auto; }
+.match-history { display: flex; gap: 3px; align-items: center; }
+.match-dot { display: inline-block; width: 8px; height: 8px; border-radius: 0; }
+
+/* Tactical Bar */
+.tact-badge { padding:4px 8px; border-radius:6px; font-size:11px; font-weight:600; background:#111; border:1px solid #333; white-space:nowrap; }
+.tact-badge.green { color:#4ade80; border-color:#4ade80; }
+.tact-badge.yellow { color:#facc15; border-color:#facc15; }
+.tact-badge.red { color:#f87171; border-color:#f87171; }
+.tact-badge.action { background:#1a1a1a; border:1px dashed #555; }
+.zone-risk { font-size:10px; padding:3px 6px; background:#0a0a0a; border:1px solid #222; border-radius:4px; color:#ccc; }
+.match-dot.win { background: var(--green); }
+.match-dot.loss { background: var(--red); }
+.match-dot.empty { background: var(--surface3); }
+.footer-right { display: flex; align-items: center; gap: 8px; }
+.streamer-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: var(--muted); user-select: none; }
+.streamer-toggle.active { color: var(--red); }
+.streamer-toggle .indicator { width: 28px; height: 14px; background: var(--surface3); border: 1px solid var(--border); position: relative; transition: background 0.15s; }
+.streamer-toggle .indicator::after { content: ''; position: absolute; top: 1px; left: 1px; width: 10px; height: 10px; background: var(--muted); transition: transform 0.15s, background 0.15s; }
+.streamer-toggle.active .indicator { border-color: var(--red); }
+.streamer-toggle.active .indicator::after { transform: translateX(14px); background: var(--red); }
+
+/* Utility */
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex { display: flex; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.gap-4 { gap: 4px; }
+.gap-6 { gap: 6px; }
+.mt-4 { margin-top: 4px; }
+.mt-6 { margin-top: 6px; }
+.mb-4 { margin-bottom: 4px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--accent); color: var(--fg); font-size: 11px; padding: 6px 14px; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; z-index: 200; }
+.toast.show { opacity: 1; }
+
+/* Loading state */
+.section.loading .section-label::after { content: ' — carregando...'; color: var(--muted); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="overlay" id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">TFT Overlay</span>
+    <span class="header-status"><span class="dot" id="statusDot"></span><span id="statusText">Conectando...</span></span>
+  </div>
+
+  <!-- Win Rate Bar -->
+  <div class="section wr-bar">
+    <div class="wr-stat">
+      <span class="wr-label">WR Overlay</span>
+      <span class="wr-value" id="overlayWR">—</span>
+      <span class="wr-detail" id="overlayWRDetail"></span>
+    </div>
+    <div class="wr-divider"></div>
+    <div class="wr-stat">
+      <span class="wr-label">WR Conta</span>
+      <span class="wr-value" id="accountWR">—</span>
+      <span class="wr-detail" id="accountWRDetail"></span>
+    </div>
+  </div>
+
+  <!-- Manual Input -->
+  <div class="section game-mode">
+    <div class="input-row">
+      <label>Nivel</label><input type="text" id="levelInput" value="" class="mono" placeholder="ex: 8">
+      <label>Ouro</label><input type="text" id="goldInput" value="" class="mono" placeholder="ex: 30">
+      <label>Augment</label><input type="text" id="augInput" placeholder="ex: Arvore de Traits" class="aug">
+      <button class="btn btn-sm" onclick="doReanalyze()">Reanalisar</button>
+    </div>
+  </div>
+
+  <!-- Tactical Bar -->
+  <div id="tactical-bar" style="display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; align-items:center;">
+    <span id="lobby-badge" class="tact-badge"></span>
+    <span id="top4-badge" class="tact-badge"></span>
+    <span id="micro-badge" class="tact-badge action"></span>
+  </div>
+  <div id="zone-risks" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+
+  <!-- Registered Augments -->
+  <div class="section game-mode" id="registeredSection">
+    <div class="section-label">Augments Registrados</div>
+    <div class="augment-row" id="registeredAugments"></div>
+    <div class="augment-registered mt-4" id="nextAugments" style="display:none"></div>
+  </div>
+
+  <!-- Comp Browser Nav (idle mode) -->
+  <div class="comp-browser" id="compBrowser">
+    <div class="browser-nav">
+      <button class="nav-btn" id="prevComp" onclick="browseComp(-1)">&#9664;</button>
+      <span class="nav-counter" id="compCounter">1 / 9</span>
+      <button class="nav-btn" id="nextCompBtn" onclick="browseComp(1)">&#9654;</button>
+    </div>
+  </div>
+
+  <!-- Composition -->
+  <div class="section" id="compSection">
+    <div class="flex-between mb-4">
+      <div>
+        <div class="comp-name" id="compName">—</div>
+        <div class="comp-meta" id="compMeta"></div>
+      </div>
+      <span class="viab-pill" id="viabilityBadge"></span>
+    </div>
+    <div id="contestWarning" style="display:none"></div>
+    <div class="flex gap-4 mt-4">
+      <button class="btn btn-sm btn-primary" onclick="copyComp()">Copiar Composição</button>
+    </div>
+  </div>
+
+  <!-- Alternative Comps -->
+  <div class="section game-mode">
+    <div class="section-label">Alternativas</div>
+    <div class="alt-row" id="altComps"></div>
+  </div>
+
+  <!-- Opponents -->
+  <div class="section game-mode opp-section">
+    <div class="section-label">Oponentes — clique: vivo → lutando → morto</div>
+    <div id="nextOpponentCard" style="display:none"></div>
+    <div class="opp-row" id="opponents"></div>
+  </div>
+
+  <!-- Units -->
+  <div class="section">
+    <div class="section-label">Unidades <span class="legend"><span class="lg carry"></span> Carry <span class="lg tank"></span> Tank <span class="lg support"></span> Flex</span></div>
+    <div class="units-grid" id="unitsGrid"></div>
+  </div>
+
+  <!-- Build Priority -->
+  <div class="section game-mode">
+    <div class="section-label">Prioridade de Itens</div>
+    <div class="build-list" id="buildPriority"></div>
+  </div>
+
+  <!-- Augment Priority -->
+  <div class="section game-mode">
+    <div class="section-label">Prioridade de Augments</div>
+    <div class="augment-row augment-suggest" id="augmentPriority"></div>
+  </div>
+
+  <!-- Augments Suggested -->
+  <div class="section">
+    <div class="section-label">Augments Sugeridos</div>
+    <div class="augment-row augment-suggest" id="suggestedAugments"></div>
+  </div>
+
+  <!-- Guides -->
+  <div class="section">
+    <div class="guide-tabs">
+      <button class="guide-tab active" data-tab="porque">Por que</button>
+      <button class="guide-tab" data-tab="como">Como jogar</button>
+      <button class="guide-tab" data-tab="pos">Posicionamento</button>
+      <button class="guide-tab" data-tab="levels">Níveis</button>
+      <button class="guide-tab" data-tab="dicas">Dicas</button>
+      <button class="guide-tab" data-tab="contra">Contra</button>
+    </div>
+    <div id="AISummary" style="font-size:12px;color:var(--accent);line-height:1.5;margin-bottom:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);font-style:italic;"></div>
+    <div class="guide-content open" id="guide-porque"><p>Aguardando analise da IA...</p></div>
+    <div class="guide-content" id="guide-como"><p>Aguardando analise...</p></div>
+    <div class="guide-content" id="guide-pos"><p>Aguardando analise da IA...</p></div>
+    <div class="guide-content" id="guide-levels"><p>Aguardando analise...</p></div>
+    <div class="guide-content" id="guide-dicas"><p>Aguardando analise...</p></div>
+    <div class="guide-content" id="guide-contra"><p>Aguardando analise...</p></div>
+  </div>
+
+  <!-- Prompt Enviado -->
+  <div class="section game-mode" id="promptSection">
+    <div class="flex-between" onclick="togglePrompt()" style="cursor:pointer">
+      <div class="section-label">Prompt Enviado para IA</div>
+      <span style="font-size:10px;color:var(--muted)" id="promptToggle">▼</span>
+    </div>
+    <pre id="promptContent" style="display:none;font-size:10px;color:var(--fg-secondary);white-space:pre-wrap;max-height:300px;overflow-y:auto;background:var(--surface2);padding:8px;border:1px solid var(--border);margin-top:4px;font-family:var(--font-mono);line-height:1.4"></pre>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="match-history" id="matchHistory"></div>
+    <div class="footer-right">
+      <span class="streamer-toggle" id="streamerToggle" onclick="toggleStreamer()">
+        <span class="indicator"></span>
+        <span>Streamer</span>
+      </span>
+      <span style="font-size:10px;color:var(--muted);">[Esc] Fechar</span>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ═══ Mappings ═══
+// Source of truth: core/data.py (CHAMP_TFTACADEMY, ITEM_TFTACADEMY)
+// /api/mappings endpoint serves these for dynamic consumers
+let streamerMode = false;
+let lastState = {};
+let toastTimer;
+let pollTimer;
+let wsConnected = false;
+let wsReconnectDelay = 1000;
+let ws = null;
+let allComps = [];
+let currentCompIdx = 0;
+let idleMode = false;
+let userPickedAlt = false;
+let serverPrimaryName = '';
+let altChampionNames = new Set();
+
+function $(id) { return document.getElementById(id); }
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+const ITEM_MAP = {
+  "Gume do Infinito": "InfinityEdge",
+  "Canhao de Repente": "RapidFireCannon",
+  "Ultimo Sussurro": "LastWhisper",
+  "Furia de Guinsoo": "GuinsoosRageblade",
+  "Lamina da Furia de Guinsoo": "GuinsoosRageblade",
+  "Chapeu de Rabadon": "RabadonsDeathcap",
+  "Capuz da Morte": "RabadonsDeathcap",
+  "Manopla Joalheira": "JeweledGauntlet",
+  "Armadura de Warmog": "WarmogsArmor",
+  "Garra do Dragao": "DragonsClaw",
+  "Armadura Gargula": "GargoyleStoneplate",
+  "Medalhao de Solari": "LocketOfTheIronSolari",
+  "Luz do Solari": "LocketOfTheIronSolari",
+  "Coracao Congelado": "FrozenHeart",
+  "Coração degelado": "FrozenHeart",
+  "Buff Azul": "BlueBuff",
+  "Redencao": "Redemption",
+  "Armadura de Espinhos": "Thornmail",
+  "Protetor de Mercurio": "QuicksilverSash",
+  "Fim da Noite": "EdgeOfNight",
+  "Lanca de Shojin": "SpearOfShojin",
+  "Lanca do Shojin": "SpearOfShojin",
+  "Garra Estatica": "StatikkShiv",
+  "Morellonomicon": "Morellonomicon",
+  "Fogo Solar": "SunfireCape",
+  "Manto de Fogo Solar": "SunfireCape",
+  "Bencao de Mika": "MikaelsBlessing",
+  "Herald de Zeke": "ZekesHerald",
+  "Capacete Adaptativo": "AdaptiveHelm",
+  "Elmo Adaptativo": "AdaptiveHelm",
+  "Juramento do Cavaleiro": "KnightsVow",
+  "Determinacao do Cavaleiro": "KnightsVow",
+  "Jura de Cavaleiro": "KnightsVow",
+  "Sanguinaria": "Bloodthirster",
+  "Mata-Gigantes": "GiantSlayer",
+  "Mao da Justica": "HandOfJustice",
+  "Cajado do Arcanjo": "ArchangelsStaff",
+  "Anjo Guardiao": "GuardianAngel",
+  "Shiv Estatico": "StatikkShiv",
+  "Lamina da Morte": "Deathblade",
+  "Manopla do Poder": "PowerGauntlet",
+  "Manopla de Sterak": "SteraksGage",
+};
+
+function itemImgUrl(name) {
+  const clean = ITEM_MAP[name] || ITEM_MAP[name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')] || '';
+  if (clean) return `/images/item_TFT_Item_${clean}_32.webp`;
+  const fallback = name.replace(/[\s'.]/g, '').replace(/-/g, '');
+  return `/images/item_TFT_Item_${fallback}_32.webp`;
+}
+
+function itemCdnUrl(name) {
+  const clean = ITEM_MAP[name] || ITEM_MAP[name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')] || '';
+  const id = clean ? clean : name.replace(/[\s'.]/g, '').replace(/-/g, '');
+  return `https://raw.communitydragon.org/latest/game/assets/maps/particles/tft/icons/items/tft_item_${id.toLowerCase()}.png`;
+}
+
+const CHAMP_MAP = {"Kai'Sa":"Kaisa","Cho'Gath":"Chogath","Bel'Veth":"Belveth","Rek'Sai":"RekSai","Nunu & Willump":"Nunu","Tahm Kench":"TahmKench","The Mighty Mech":"Galio","LeBlanc":"Leblanc","Master Yi":"MasterYi","Miss Fortune":"MissFortune","Twisted Fate":"TwistedFate","Aurelion Sol":"AurelionSol"};
+
+function champImgUrl(name) {
+  const clean = CHAMP_MAP[name] || name.replace(/[\s'.&]/g, '');
+  return `/images/champ_TFT17_${clean}_56.webp`;
+}
+
+function champCdnUrl(name) {
+  const clean = CHAMP_MAP[name] || name.replace(/[\s'.&]/g, '');
+  return `https://ddragon.leagueoflegends.com/cdn/15.10.1/img/champion/${clean}.png`;
+}
+
+const ITEM_DD_ID = {
+  "InfinityEdge":"3031","RapidFireCannon":"3094","LastWhisper":"3035",
+  "GuinsoosRageblade":"3124","RabadonsDeathcap":"3089","WarmogsArmor":"3083",
+  "GargoyleStoneplate":"3193","LocketOfTheIronSolari":"3190","FrozenHeart":"3110",
+  "Redemption":"3107","Thornmail":"3075","QuicksilverSash":"3140",
+  "EdgeOfNight":"3814","SpearOfShojin":"3161","StatikkShiv":"3087",
+  "Morellonomicon":"3165","MikaelsBlessing":"3222","AdaptiveHelm":"3109",
+  "KnightsVow":"3109","BlueBuff":"3003","DragonsClaw":"3065",
+  "SunfireCape":"3068","ZekesHerald":"3050","JeweledGauntlet":"3089",
+  "Deathblade":"3031","ArchangelsStaff":"3003","Bloodthirster":"3072",
+  "GiantsBelt":"3083","ChainVest":"3105","NegatronCloak":"3155",
+  "RecurveBow":"3091","TearOfTheGoddess":"3070","SparringGloves":"3051",
+  "BFSword":"3031","NeedlesslyLargeRod":"3089","WarmogsArmor":"3083",
+  "GuardianAngel":"3026","SteraksGage":"3053","FrozenHeart":"3110",
+  "BlueBuff":"3003","RedBuff":"3068","DragonsClaw":"3065",
+  "GargoyleStoneplate":"3193","MadredsBloodrazor":"3124",
+  "StatikkShiv":"3087","SpearOfShojin":"3161","ArchangelsStaff":"3003",
+  "LocketOfTheIronSolari":"3190","Redemption":"3107","AdaptiveHelm":"3109",
+};
+
+function itemCdnUrl(name) {
+  const clean = ITEM_MAP[name];
+  const id = clean ? clean : name.replace(/[\s'.]/g, '').replace(/-/g, '');
+  const ddId = ITEM_DD_ID[id];
+  if (ddId) return `https://ddragon.leagueoflegends.com/cdn/15.10.1/img/item/${ddId}.png`;
+  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/maps/particles/tft/icons/items/tft_item_${id.toLowerCase()}.png`;
+}
+
+function renderName(name, rank) {
+  if (streamerMode) return name.slice(0, 2) + '***';
+  return rank ? `${name} (${rank})` : name;
+}
+
+function wrClass(wr) {
+  if (wr == null || wr === '') return '';
+  const n = parseFloat(wr);
+  if (isNaN(n)) return '';
+  return n >= 55 ? 'green' : n >= 50 ? 'yellow' : 'red';
+}
+
+function viabClass(v) {
+  if (v == null) return '';
+  return v >= 70 ? 'viab-high' : v >= 40 ? 'viab-mid' : 'viab-low';
+}
+
+// ══ Render active comp ══
+function renderCompFromData(c) {
+  if (!c) return;
+  $('compName').textContent = c.name || '—';
+  const meta = $('compMeta');
+  const wr = c.win_rate;
+  const avg = c.avg_placement;
+  const games = c.games;
+  let html = '';
+  if (wr != null && wr !== '') {
+    const cls = wrClass(wr);
+    html += `<span class="${cls}">WR: ${wr}%</span>`;
+  }
+  if (avg != null && avg !== '') html += ` <span class="mono">Avg: ${avg}</span>`;
+  if (games != null && games !== '') html += ` <span class="mono">${games} jogos</span>`;
+  if (c.tier) html += ` <span class="mono">Tier ${c.tier}</span>`;
+  meta.innerHTML = html;
+
+  const viab = c.viability;
+  const badge = $('viabilityBadge');
+  if (viab != null) {
+    badge.textContent = viab + '%';
+    badge.className = 'viab-pill mono ' + viabClass(viab);
+  } else if (c.tier) {
+    badge.textContent = 'T' + c.tier;
+    badge.className = 'viab-pill mono ' + (c.tier === 'S' ? 'viab-high' : c.tier === 'A' ? 'viab-mid' : 'viab-low');
+  } else {
+    badge.textContent = '';
+    badge.className = 'viab-pill';
+  }
+
+  const contest = c.contest;
+  const cw = $('contestWarning');
+  if (contest != null && contest > 0) {
+    cw.style.display = '';
+    const level = contest >= 4 ? 'high' : contest >= 2 ? 'mid' : 'low';
+    cw.className = 'contest-warn contest-' + level;
+    cw.textContent = contest + ' jogadores com comp similar';
+  } else {
+    cw.style.display = 'none';
+  }
+
+  renderUnitsFromData(c.units || []);
+  renderBuildPriority(c.units || []);
+  renderAugmentPriority(c.augments || [], lastState.registered_augments || []);
+  renderAugmentsFromData(c.augments || []);
+  renderGuidesFromData(c);
+}
+
+function renderUnitsFromData(units) {
+  const grid = $('unitsGrid');
+  if (!units.length) { grid.innerHTML = '<span style="color:var(--muted)">Nenhuma unidade</span>'; return; }
+  const sorted = [...units].sort((a, b) => {
+    const oa = typeof a === 'string' ? {name: a, items: [], tank: false} : a;
+    const ob = typeof b === 'string' ? {name: b, items: [], tank: false} : b;
+    const ia = (oa.items||[]).length, ib = (ob.items||[]).length;
+    if (ia !== ib) return ib - ia;
+    if (oa.tank && !ob.tank) return 1;
+    if (!oa.tank && ob.tank) return -1;
+    return 0;
+  });
+  grid.innerHTML = sorted.map(u => {
+    const obj = typeof u === 'string' ? {name: u, items: [], tank: false} : u;
+    const isTank = obj.tank || false;
+    const items = obj.items || [];
+    const name = obj.name || '';
+    const role = altChampionNames.has(name) ? 'alt' : isTank ? 'tank' : items.length >= 3 ? 'carry' : 'support';
+    return `<div class="unit-card ${role}">
+      <div class="champ-img"><img src="${champImgUrl(name)}" alt="${name}" data-cdn="${champCdnUrl(name)}" data-name="${name}" style="width:40px;height:40px;object-fit:cover;border-radius:3px;" onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src=this.dataset.cdn}else{var n=this.dataset.name||'?';this.style.display='none';this.parentNode.textContent=n[0];this.parentNode.style.cssText='display:flex;align-items:center;justify-content:center;font-size:14px;color:#606060;background:#111'}" onload="this.style.display=''"></div>
+      <div class="unit-name">${name}</div>
+      <div class="unit-items">${items.length ? items.map(i => {
+        return `<div class="item-icon-wrap"><img class="item-icon" src="${itemImgUrl(i)}" alt="${i}" data-cdn="${itemCdnUrl(i)}" title="${i}" style="cursor:help" onerror="if(!this.dataset.tried){this.dataset.tried='1';this.src=this.dataset.cdn}else{this.style.display='none'}"><span class="item-label">${i}</span></div>`;
+      }).join('') : '<span class="flex-slot">Flex</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAugmentsFromData(augs) {
+  const container = $('suggestedAugments');
+  if (!augs.length) { container.innerHTML = '<span style="color:var(--muted)">Nenhum augment sugerido</span>'; return; }
+  container.innerHTML = augs.map(a => `<span class="augment-pill">${a}</span>`).join('');
+}
+
+function renderBuildPriority(units) {
+  const el = $('buildPriority');
+  if (!units || !units.length) { el.innerHTML = ''; return; }
+  const sorted = [...units].sort((a, b) => {
+    const ia = (a.items||[]).length, ib = (b.items||[]).length;
+    if (ia !== ib) return ib - ia;
+    if (a.tank && !b.tank) return 1;
+    if (!a.tank && b.tank) return -1;
+    return 0;
+  });
+  const lines = [];
+  let num = 1;
+  for (const u of sorted) {
+    const name = u.name || '';
+    const items = u.items || [];
+    if (!items.length) continue;
+    const role = u.tank ? 'tank' : items.length >= 3 ? 'carry' : 'support';
+    const label = role === 'carry' ? 'Carry' : role === 'tank' ? 'Tank' : 'Flex';
+    for (const item of items) {
+      lines.push(`<div class="build-item"><span class="build-num">${num}</span><span class="build-role ${role}">${label}</span><span class="build-champ">${name}</span><span>${item}</span></div>`);
+      num++;
+    }
+  }
+  el.innerHTML = lines.join('') || '<span style="color:var(--muted)">Sem itens para buildar</span>';
+}
+
+function renderAugmentPriority(augs, registered) {
+  const el = $('augmentPriority');
+  if (!augs || !augs.length) { el.innerHTML = '<span style="color:var(--muted)">Nenhum augment disponivel</span>'; return; }
+  const regSet = new Set(registered || []);
+  const matched = [], unmatched = [];
+  for (const a of augs) {
+    if (regSet.has(a)) matched.push(a);
+    else unmatched.push(a);
+  }
+  let html = '';
+  if (matched.length) {
+    html += matched.map(a => `<span class="augment-pill" style="border-color:var(--green);color:var(--green)">${a} &#10003;</span>`).join('');
+  }
+  if (unmatched.length) {
+    if (matched.length) html += '<span style="font-size:9px;color:var(--muted);margin:0 4px">|</span>';
+    html += unmatched.map(a => `<span class="augment-pill">${a}</span>`).join('');
+  }
+  el.innerHTML = html;
+}
+
+function renderGuidesFromData(c) {
+  const summary = $('AISummary');
+  const hasSummary = c.motivo || c.summary;
+  if (hasSummary) {
+    summary.textContent = c.motivo || c.summary;
+    summary.style.display = '';
+  } else {
+    summary.style.display = 'none';
+  }
+  const tabs = {porque: c.porque || '', como: c.como || '', pos: c.positioning || '', levels: c.levels || '', dicas: c.dicas || '', contra: c.contra || ''};
+  for (const [k, v] of Object.entries(tabs)) {
+    const el = $('guide-' + k);
+    if (el) el.innerHTML = v ? `<p>${v.replace(/\n/g, '</p><p>')}</p>` : '<p>—</p>';
+  }
+}
+
+let promptVisible = false;
+function togglePrompt() {
+  promptVisible = !promptVisible;
+  $('promptContent').style.display = promptVisible ? '' : 'none';
+  $('promptToggle').textContent = promptVisible ? '▲' : '▼';
+}
+
+function renderPrompt(state) {
+  const p = state.prompt || '';
+  $('promptContent').textContent = p || 'Nenhum prompt enviado ainda.';
+}
+
+// ══ Header ══
+function renderHeader(state) {
+  const status = state.status || 'Desconectado';
+  const stage = state.stage || '';
+  $('statusText').textContent = stage ? `${status} — ${stage}` : status;
+}
+
+function renderWinRate(state) {
+  const owr = state.overlay_win_rate;
+  const awr = state.account_win_rate;
+  const ot = state.overlay_total;
+  const at = state.account_total;
+  const oEl = $('overlayWR'), aEl = $('accountWR');
+  const oDet = $('overlayWRDetail'), aDet = $('accountWRDetail');
+  if (owr != null && owr > 0) { oEl.textContent = owr+'%'; oEl.className = 'wr-value '+(owr>=50?'win':owr>=40?'mid':'low'); oDet.textContent = `(${ot} partidas)`; }
+  else { oEl.textContent = '—'; oEl.className = 'wr-value'; oDet.textContent = ''; }
+  if (awr != null && awr > 0) { aEl.textContent = awr+'%'; aEl.className = 'wr-value '+(awr>=50?'win':awr>=40?'mid':'low'); aDet.textContent = `(${at} partidas)`; }
+  else { aEl.textContent = '—'; aEl.className = 'wr-value'; aDet.textContent = ''; }
+}
+
+function renderManualInput(state) {
+  $('levelInput').value = state.level ?? '';
+  $('goldInput').value = state.gold ?? '';
+}
+
+function renderAugments(state) {
+  const reg = state.registered_augments || [];
+  const container = $('registeredAugments');
+  container.innerHTML = reg.length === 0 ? '<span style="color:var(--muted)">Nenhum augment registrado</span>' : reg.map(a => `<span class="augment-pill">${a}</span>`).join('');
+  const next = state.next_augments || [];
+  const nextEl = $('nextAugments');
+  if (next.length > 0) { nextEl.style.display = ''; nextEl.innerHTML = `Próximos: ${next.map(a => `<span>${a}</span>`).join(', ')}`; }
+  else { nextEl.style.display = 'none'; }
+}
+
+function renderTactical(state) {
+  if (state.lobby_pressure) {
+    const lb = document.getElementById('lobby-badge');
+    lb.textContent = state.lobby_pressure.label;
+    lb.className = 'tact-badge ' + state.lobby_pressure.color;
+  }
+  if (state.top4_score) {
+    const t4 = document.getElementById('top4-badge');
+    t4.textContent = state.top4_score.label;
+    t4.className = 'tact-badge ' + state.top4_score.color;
+  }
+  if (state.micro_decision) {
+    const md = document.getElementById('micro-badge');
+    md.textContent = state.micro_decision.action + ' | ' + state.micro_decision.reason;
+    md.className = 'tact-badge action';
+  }
+  if (state.zone_risks && state.zone_risks.length) {
+    document.getElementById('zone-risks').innerHTML = state.zone_risks.map(r =>
+      '<span class="zone-risk">' + r.icon + ' ' + r.reason + '</span>'
+    ).join('');
+  }
+}
+
+function renderComp(state) {
+  const comp = state.comp || {};
+  if (userPickedAlt && serverPrimaryName && comp.name !== serverPrimaryName) {
+    serverPrimaryName = comp.name;
+    userPickedAlt = false;
+    altChampionNames.clear();
+  }
+  if (userPickedAlt) return;
+  serverPrimaryName = comp.name || '';
+  renderCompFromData(comp);
+}
+
+function renderAltComps(state) {
+  const alts = state.alternative_comps || [];
+  const container = $('altComps');
+  if (alts.length === 0) { container.innerHTML = '<span style="color:var(--muted)">Nenhuma alternativa</span>'; return; }
+  container.innerHTML = alts.map((a, i) => {
+    let inner = a.name;
+    if (a.tier) inner += ` <span class="tier">T${a.tier}</span>`;
+    if (a.win_rate) inner += ` <span class="wr">${a.win_rate}%</span>`;
+    return `<span class="alt-pill" data-idx="${i}" onclick="selectAlt(${i})">${inner}</span>`;
+  }).join('');
+}
+
+function rankBadgeClass(rank) {
+  if (!rank) return 'rank-unknown';
+  const r = rank.toUpperCase();
+  if (r.includes('CHALLENGER')) return 'rank-challenger';
+  if (r.includes('GRANDMASTER')) return 'rank-grandmaster';
+  if (r.includes('MASTER')) return 'rank-master';
+  if (r.includes('DIAMOND')) return 'rank-diamond';
+  if (r.includes('EMERALD')) return 'rank-emerald';
+  if (r.includes('PLATINUM') || r.includes('PLATINA')) return 'rank-platinum';
+  if (r.includes('GOLD') || r.includes('OURO')) return 'rank-gold';
+  if (r.includes('SILVER') || r.includes('PRATA')) return 'rank-silver';
+  if (r.includes('BRONZE')) return 'rank-bronze';
+  if (r.includes('IRON') || r.includes('FERRO')) return 'rank-iron';
+  return 'rank-unknown';
+}
+
+function rankShort(rank) {
+  if (!rank || rank === 'Desconhecido' || rank === 'Sem Rank') return '?';
+  const m = rank.match(/^(Challenger|Grandmaster|Master|Diamond|Emerald|Platinum|Gold|Silver|Bronze|Iron|Ouro|Prata|Ferro|Platina)\s*(I{1,3}V?|IV|V?)/i);
+  if (m) {
+    const tier = m[1].charAt(0).toUpperCase();
+    const div = m[2] ? m[2] : '';
+    return tier + div;
+  }
+  return rank.split(' ')[0].substring(0, 3);
+}
+
+function renderOpponents(state) {
+  const opps = state.opponents || [];
+  let nextName = state.next_opponent || '';
+  const container = $('opponents');
+  const nextCard = $('nextOpponentCard');
+
+  if (opps.length === 0) {
+    container.innerHTML = '<span style="color:var(--muted)">Nenhum oponente detectado</span>';
+    nextCard.style.display = 'none';
+    return;
+  }
+
+  if (!nextName) {
+    for (const [name, st] of Object.entries(opponentStates)) {
+      if (st === 1) { nextName = name; break; }
+    }
+  }
+
+  const nextOpp = opps.find(o => o.name === nextName);
+  if (nextOpp) {
+    const dn = streamerMode ? nextOpp.name.slice(0, 2) + '***' : nextOpp.name;
+    const rank = nextOpp.rank || '';
+    const avg = nextOpp.avg || '';
+    const comps = nextOpp.recent_comps || [];
+    let compsHtml = '';
+    if (comps.length > 0 && !streamerMode) {
+      compsHtml = '<div class="opp-next-comps">Comps: ' + comps.slice(0, 2).map(c => {
+        const name = Array.isArray(c) ? c[0] : (c.comp || c.name || c);
+        return typeof name === 'string' ? name.split(',').slice(0, 3).join(', ') : '';
+      }).filter(n => n).join(' · ') + '</div>';
+    }
+    nextCard.innerHTML = `<div class="opp-next-label">⚔ Próximo Adversário</div>
+      <div class="opp-next-name">${dn}</div>
+      ${rank ? `<div class="opp-next-rank">${streamerMode ? '--' : rank}</div>` : ''}
+      ${avg ? `<div class="opp-next-info">Avg: ${avg}</div>` : ''}
+      ${compsHtml}`;
+    nextCard.style.display = '';
+  } else {
+    nextCard.style.display = 'none';
+  }
+
+  container.innerHTML = opps.map((o, i) => {
+    const st = opponentStates[o.name] || 0;
+    const sc = st === 0 ? 'alive' : st === 1 ? 'fighting' : 'dead';
+    const isNext = o.name === nextName;
+    const cls = sc + (isNext ? ' next-opp' : '');
+    const dn = streamerMode ? o.name.slice(0, 2) + '***' : o.name;
+    const prefix = st === 1 ? '⚔ ' : st === 2 ? '✗ ' : '';
+    const badge = o.rank && !streamerMode
+      ? `<span class="opp-rank-badge ${rankBadgeClass(o.rank)}">${rankShort(o.rank)}</span>`
+      : '';
+    return `<div class="opp-card ${cls}" onclick="cycleOpponent(${i})">${prefix}${dn}${badge}</div>`;
+  }).join('');
+}
+
+function renderMatchHistory(state) {
+  const mh = state.match_history || {};
+  const recent = mh.recent || [];
+  const container = $('matchHistory');
+  if (recent.length === 0) { container.innerHTML = '<span style="color:var(--muted)">Nenhuma partida recente</span>'; return; }
+  container.innerHTML = recent.map(r => `<span class="match-dot ${r}"></span>`).join('') + `<span style="margin-left:6px;color:var(--fg-secondary);">${mh.win_rate||0}% WR (${mh.total||recent.length} partidas)</span>`;
+}
+
+// ══ Idle mode — comp browser ══
+function detectIdleMode(state) {
+  const status = (state.status || '').toLowerCase();
+  const hasOpponents = (state.opponents || []).length > 0;
+  const compName = (state.comp || {}).name;
+  idleMode = !hasOpponents && compName && (
+    status.includes('aguardando') || status.includes('inicial') || status.includes('conect') || status.includes('offline') || !status
+  );
+  return idleMode;
+}
+
+function showIdleMode() {
+  document.querySelectorAll('.game-mode').forEach(el => el.classList.add('hidden'));
+  $('compBrowser').classList.add('visible');
+}
+
+function hideIdleMode() {
+  document.querySelectorAll('.game-mode').forEach(el => el.classList.remove('hidden'));
+  $('compBrowser').classList.remove('visible');
+}
+
+async function loadAllComps() {
+  try {
+    const resp = await fetch('/api/comps');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    allComps = data.comps || [];
+    if (allComps.length > 0) {
+      currentCompIdx = 0;
+      renderBrowsedComp();
+    }
+  } catch {}
+}
+
+function renderBrowsedComp() {
+  if (!allComps.length) return;
+  const c = allComps[currentCompIdx];
+  renderCompFromData(c);
+  $('compCounter').textContent = `${currentCompIdx + 1} / ${allComps.length}`;
+  $('prevComp').disabled = currentCompIdx <= 0;
+  $('nextCompBtn').disabled = currentCompIdx >= allComps.length - 1;
+}
+
+function browseComp(dir) {
+  const newIdx = currentCompIdx + dir;
+  if (newIdx < 0 || newIdx >= allComps.length) return;
+  currentCompIdx = newIdx;
+  renderBrowsedComp();
+}
+
+// ══ Select alt comp as primary ══
+function selectAlt(idx) {
+  const alts = lastState.alternative_comps || [];
+  if (idx < 0 || idx >= alts.length) return;
+  const chosen = JSON.parse(JSON.stringify(alts[idx]));
+
+  document.querySelectorAll('.alt-pill').forEach(p => p.classList.remove('active'));
+  const pill = document.querySelector(`.alt-pill[data-idx="${idx}"]`);
+  if (pill) pill.classList.add('active');
+
+  const comp = lastState.comp || {};
+  const oldPrimary = JSON.parse(JSON.stringify(comp));
+
+  const chosenUnits = (chosen.units || []).map(u =>
+    typeof u === 'string' ? {name: u, items: [], tank: false} : u
+  );
+
+  lastState.comp = {
+    name: chosen.name,
+    tier: chosen.tier,
+    win_rate: chosen.win_rate,
+    avg_placement: chosen.avg_placement || '',
+    games: chosen.games || '',
+    viability: null,
+    contest: null,
+    units: chosenUnits,
+    augments: chosen.augments || [],
+    positioning: chosen.positioning || '',
+    levels: chosen.levels || '',
+    dicas: chosen.dicas || '',
+    porque: chosen.porque || '',
+    como: chosen.como || '',
+    contra: '',
+  };
+
+  alts[idx] = {
+    name: oldPrimary.name,
+    tier: oldPrimary.tier,
+    win_rate: oldPrimary.win_rate,
+    avg_placement: oldPrimary.avg_placement || '',
+    units: (oldPrimary.units || []).map(u =>
+      typeof u === 'string' ? {name: u, items: [], tank: false} : u
+    ),
+    augments: oldPrimary.augments || [],
+    positioning: oldPrimary.positioning || lastState.comp.positioning || '',
+    levels: oldPrimary.levels || lastState.comp.levels || '',
+    dicas: oldPrimary.dicas || lastState.comp.dicas || '',
+    porque: oldPrimary.porque || lastState.comp.porque || '',
+    como: oldPrimary.como || lastState.comp.como || '',
+    tanks: oldPrimary.tanks || [],
+  };
+
+  userPickedAlt = true;
+  const oldNames = new Set((oldPrimary.units || []).map(u => typeof u === 'string' ? u : u.name));
+  altChampionNames.clear();
+  for (const u of chosenUnits) {
+    const n = typeof u === 'string' ? u : u.name;
+    if (!oldNames.has(n)) altChampionNames.add(n);
+  }
+
+  renderCompFromData(lastState.comp);
+  renderGuidesFromData(lastState.comp);
+  renderAltComps(lastState);
+  showToast(`Comp: ${chosen.name}`);
+}
+
+// ══ State machine for opponent cycling ══
+let opponentStates = {};
+function cycleOpponent(idx) {
+  const opps = lastState.opponents || [];
+  if (idx < 0 || idx >= opps.length) return;
+  const key = opps[idx].name;
+  const cur = opponentStates[key] || 0;
+  opponentStates[key] = (cur + 1) % 3;
+  for (const k of Object.keys(opponentStates)) {
+    if (k !== key && opponentStates[k] === 1) {
+      opponentStates[k] = 0;
+    }
+  }
+  renderOpponents(lastState);
+}
+
+// ══ Network ══
+async function fetchState() {
+  try {
+    const resp = await fetch('/api/state');
+    if (!resp.ok) throw new Error(resp.status);
+    return await resp.json();
+  } catch { return null; }
+}
+
+function renderAll(state) {
+  if (!state) return;
+  lastState = state;
+
+  if (detectIdleMode(state)) {
+    showIdleMode();
+    if (!allComps.length) loadAllComps();
+    const c = state.comp || {};
+    if (c.name && !allComps.length) renderCompFromData(c);
+  } else {
+    hideIdleMode();
+    allComps = [];
+    renderHeader(state);
+    renderManualInput(state);
+    renderTactical(state);
+    renderAugments(state);
+    renderComp(state);
+    renderAltComps(state);
+    renderOpponents(state);
+    renderMatchHistory(state);
+    renderPrompt(state);
+  }
+  renderWinRate(state);
+}
+
+async function poll() {
+  const state = await fetchState();
+  if (state) {
+    $('statusDot').style.background = '#66bb6a';
+    wsConnected = true;
+    renderAll(state);
+  } else {
+    $('statusDot').style.background = '#ef5350';
+    $('statusText').textContent = 'Backend offline — reconectando...';
+    if (!idleMode) { idleMode = true; showIdleMode(); if (!allComps.length) loadAllComps(); }
+  }
+}
+
+function connectWS() {
+  const wsPort = window.location.port ? parseInt(window.location.port) + 1 : 8766;
+  try {
+    ws = new WebSocket(`ws://127.0.0.1:${wsPort}`);
+    ws.onopen = () => { wsConnected = true; wsReconnectDelay = 1000; $('statusDot').style.background = '#66bb6a'; if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
+    ws.onmessage = (e) => { try { renderAll(JSON.parse(e.data)); } catch {} };
+    ws.onclose = () => { wsConnected = false; $('statusDot').style.background = '#ffa726'; if (!pollTimer) pollTimer = setInterval(poll, 2000); setTimeout(connectWS, wsReconnectDelay); wsReconnectDelay = Math.min(wsReconnectDelay * 2, 30000); };
+    ws.onerror = () => { ws.close(); };
+  } catch { if (!pollTimer) pollTimer = setInterval(poll, 2000); }
+}
+
+// ══ User Actions ══
+function copyComp() {
+  const comp = (lastState.comp || {});
+  const units = comp.units || [];
+  if (!units.length) { showToast('Nenhum time para copiar'); return; }
+  const names = units.map(u => u.name || u).join(', ');
+  const text = `${comp.name || 'Comp'}: ${names}`;
+  const code = lastState.import_code || '';
+  const clip = code ? code + '\n' + text : text;
+  navigator.clipboard.writeText(clip).then(() => showToast(code ? 'Código + comp copiados!' : 'Comp copiada!')).catch(() => showToast('Erro ao copiar'));
+}
+
+function doReanalyze() {
+  const aug = $('augInput').value.trim();
+  const level = $('levelInput').value.trim();
+  const gold = $('goldInput').value.trim();
+  let path = '/api/reanalyze';
+  const params = [];
+  if (aug) params.push('augment=' + encodeURIComponent(aug));
+  if (level) params.push('level=' + encodeURIComponent(level));
+  if (gold) params.push('gold=' + encodeURIComponent(gold));
+  if (params.length) path += '?' + params.join('&');
+  fetch(path).then(r => r.json()).then(resp => showToast(resp.message || 'Reanálise solicitada')).catch(() => showToast('Erro ao solicitar reanálise'));
+}
+
+function toggleStreamer() {
+  streamerMode = !streamerMode;
+  $('streamerToggle').classList.toggle('active', streamerMode);
+  renderOpponents(lastState);
+  renderAltComps(lastState);
+}
+
+// ══ Guide tabs ══
+document.querySelectorAll('.guide-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.guide-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.guide-content').forEach(c => c.classList.remove('open'));
+    tab.classList.add('active');
+    $('guide-' + tab.dataset.tab).classList.add('open');
+  });
+});
+
+// ══ Keyboard ══
+document.addEventListener('keydown', e => {
+  if (idleMode && allComps.length) {
+    if (e.key === 'ArrowLeft') browseComp(-1);
+    else if (e.key === 'ArrowRight') browseComp(1);
+  }
+});
+
+// ══ Init ══
+poll();
+pollTimer = setInterval(poll, 2000);
+connectWS();
+</script>
+</body>
+</html>

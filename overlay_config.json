@@ -1,0 +1,48 @@
+{
+  "window": {
+    "width": 420,
+    "height": 580,
+    "alpha": 0.92,
+    "x": -8,
+    "y": 3
+  },
+  "polling": {
+    "in_game": 6,
+    "out_of_game": 12
+  },
+  "ai": {
+    "provider": "opencode-zen",
+    "model": "deepseek-v4-flash-free",
+    "base_url": "https://opencode.ai/zen/v1/chat/completions",
+    "timeout": 60,
+    "max_retries": 3,
+    "max_tokens": 3000,
+    "temperature": 0.1
+  },
+  "ui": {
+    "theme": "dark",
+    "show_positioning_grid": true,
+    "font_size": 10
+  },
+  "memory": {
+    "db_path": "data/memory.db",
+    "max_matches_cache": 300,
+    "pattern_min_trials": 3
+  },
+  "logging": {
+    "level": "INFO",
+    "max_bytes": 5242880,
+    "backup_count": 7
+  },
+  "riot_region": "br1",
+  "riot_platform": "americas",
+  "tft_set": "TFTSet17",
+  "features": {
+    "ai_suggestions": true,
+    "opponent_tracking": true,
+    "meta_auto_update": true,
+    "patch_detection": true,
+    "community_dragon": true,
+    "offline_mode": true
+  }
+}
